@@ -1,0 +1,15 @@
+[project]
+name = "rezearcher"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "beautifulsoup4>=4.14.2",
+    "ddgs>=9.7.1",
+    "langchain>=1.0.3",
+    "langchain-community>=0.4.1",
+    "langchain-ollama>=1.0.0",
+    "langgraph>=1.0.2",
+    "reportlab>=4.4.4",
+]
