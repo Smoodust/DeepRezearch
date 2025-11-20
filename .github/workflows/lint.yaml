@@ -41,9 +41,9 @@ jobs:
 
     - name: Auto-format code
       run: |
-        black --verbose final_solution/
-        isort --verbose final_solution/
-        autoflake --in-place --remove-all-unused-imports --ignore-init-module-imports --remove-unused-variables --recursive final_solution/
+        black --verbose .
+        isort --verbose .
+        autoflake --in-place --remove-all-unused-imports --ignore-init-module-imports --remove-unused-variables --recursive .
 
     - name: Commit and push changes
       run: |
