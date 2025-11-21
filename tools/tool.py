@@ -1,9 +1,10 @@
-from typing import Optional
-from bs4 import BeautifulSoup
-from langchain.chat_models import init_chat_model
-from ddgs import DDGS
 import time
+from typing import Optional
+
 import requests
+from bs4 import BeautifulSoup
+from ddgs import DDGS
+from langchain.chat_models import init_chat_model
 
 model = init_chat_model("qwen3:0.6b", model_provider="ollama")
 search_engine = DDGS()
@@ -52,32 +53,34 @@ prompt = """You are an expert web content extractor. Your task is to identify an
 
 **Output:**"""
 
+
 def _extract_text_from_url(url: str) -> Optional[str]:
     """Extract readable text from a web page"""
     try:
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         }
-        
+
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
-        
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
+
+        soup = BeautifulSoup(response.content, "html.parser")
+
         # Remove script and style elements
         for script in soup(["script", "style"]):
             script.decompose()
-        
+
         # Get text and clean it up
         if soup.body is None:
             return None
 
         text = soup.body.prettify()
         return model.invoke(prompt.format(html_content=text)).text
-        
+
     except Exception as e:
         print(f"Error extracting text from {url}: {str(e)}")
         return None
+
 
 def search_internet(query: str, limit: int = 10) -> list[str]:
     """Search the DuckDuckGo matching the query.
@@ -88,23 +91,26 @@ def search_internet(query: str, limit: int = 10) -> list[str]:
     """
     search_results = search_engine.text(query, max_results=limit)
     extracted_texts = []
-            
+
     for i, result in enumerate(search_results):
-        url = result.get('href', '')
-        title = result.get('title', 'No title')
-        
+        url = result.get("href", "")
+        title = result.get("title", "No title")
+
         print(f"Processing result {i+1}: {title}")
-        
+
         # Extract text from URL
         page_text = _extract_text_from_url(url)
         if page_text:
             model.invoke()
-            extracted_texts.append(f"## Result {len(extracted_texts)+1}: {title}\nContent: {page_text}\n")
-        
+            extracted_texts.append(
+                f"## Result {len(extracted_texts)+1}: {title}\nContent: {page_text}\n"
+            )
+
         # Add small delay to be respectful to servers
         time.sleep(1)
     return extracted_texts
 
+
 for x in search_internet(query="python programming"):
     print(x)
-    print('='*30)
+    print("=" * 30)
