@@ -14,7 +14,7 @@ Instructions:
 - Don't produce more than {number_queries} queries.
 - Queries should be diverse, if the topic is broad, generate more than 1 query.
 - Don't generate multiple similar queries, 1 is enough.
-- Query should ensure that the most current information is gathered. The current date is {current_date}.
+- Query should ensure that the most current information is gathered.
 
 Format: 
 - Format your response as a JSON object with ALL two of these exact keys:
@@ -30,19 +30,20 @@ Topic: What revenue grew more last year apple stock or the number of people buyi
     "query": ["Apple total revenue growth fiscal year 2024", "iPhone unit sales growth fiscal year 2024", "Apple stock price growth fiscal year 2024"],
 }}
 ```
-
+The current date is {current_date}.
 Context: {research_topic}"""
 
 
 web_searcher_instructions = """Conduct targeted Google Searches to gather the most recent, credible information on "{research_topic}" and synthesize it into a verifiable text artifact.
 
 Instructions:
-- Query should ensure that the most current information is gathered. The current date is {current_date}.
+- Query should ensure that the most current information is gathered.
 - Conduct multiple, diverse searches to gather comprehensive information.
 - Consolidate key findings while meticulously tracking the source(s) for each specific piece of information.
 - The output should be a well-written summary or report based on your search findings. 
 - Only include the information found in the search results, don't make up any information.
 
+The current date is {current_date}.
 Research Topic:
 {research_topic}
 """
@@ -82,13 +83,13 @@ Summaries:
 answer_instructions = """Generate a high-quality answer to the user's question based on the provided summaries.
 
 Instructions:
-- The current date is {current_date}.
 - You are the final step of a multi-step research process, don't mention that you are the final step. 
 - You have access to all the information gathered from the previous steps.
 - You have access to the user's question.
 - Generate a high-quality answer to the user's question based on the provided summaries and the user's question.
 - Include the sources you used from the Summaries in the answer correctly, use markdown format (e.g. [apnews](https://vertexaisearch.cloud.google.com/id/1-0)). THIS IS A MUST.
 
+The current date is {current_date}.
 User Context:
 - {research_topic}
 
