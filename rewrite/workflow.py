@@ -43,11 +43,14 @@ def llm_orchestrator(state: State):
     print(decision)
     return {"next_step": decision.workflow_type}
 
+
 def coding(state: State):
     return {}
 
+
 def searching(state: State):
     return {}
+
 
 def synthesizer(state: State):
     context = make_context(
@@ -57,8 +60,10 @@ def synthesizer(state: State):
     )
     return {"final_report": llm.invoke(context).content}
 
+
 def should_continue(state: State):
     return state["next_step"]
+
 
 deep_researcher_builder = StateGraph(State)
 deep_researcher_builder.add_node("orchestrator", llm_orchestrator)
@@ -69,7 +74,9 @@ deep_researcher_builder.add_node("synthesizer", synthesizer)
 # Add edges to connect nodes
 deep_researcher_builder.add_edge(START, "orchestrator")
 deep_researcher_builder.add_conditional_edges(
-    "orchestrator", should_continue, {"coding":"coding", "searching":"searching", "synthesizer":"synthesizer"}
+    "orchestrator",
+    should_continue,
+    {"coding": "coding", "searching": "searching", "synthesizer": "synthesizer"},
 )
 deep_researcher_builder.add_edge("coding", "orchestrator")
 deep_researcher_builder.add_edge("searching", "orchestrator")
