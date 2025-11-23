@@ -1,22 +1,19 @@
-from typing import Dict, List, Any, Optional
-from langchain_core.tools import BaseTool
+import json
+from typing import Any, Dict
+
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import SystemMessage
 from pydantic import BaseModel, Field
-import json
 
 
 class OrchestratorDecision(BaseModel):
     """Model for orchestrator routing decision"""
 
-    workflow_type: str = Field(
-        description="Type of workflow: 'coding', 'research'"
-    )
+    workflow_type: str = Field(description="Type of workflow: 'coding', 'research'")
     reasoning: str = Field(description="Reasoning behind the decision")
     confidence: float = Field(description="Confidence score from 0 to 1")
     needs_additional_info: bool = Field(
-        default=False,
-        description="Whether additional information is needed"
+        default=False, description="Whether additional information is needed"
     )
 
 
@@ -76,20 +73,21 @@ DO NOT include code examples.
 
             # Очистка и парсинг ответа
             content = response.content.strip()
-            
+
             # Извлечение JSON из ответа
             import re
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
+
+            json_match = re.search(r"\{.*\}", content, re.DOTALL)
             if json_match:
                 content = json_match.group()
-            
+
             # Парсинг JSON
             decision_data = json.loads(content)
-            
+
             # Убедимся, что все обязательные поля присутствуют
             if "needs_additional_info" not in decision_data:
                 decision_data["needs_additional_info"] = False
-                
+
             return OrchestratorDecision(**decision_data)
 
         except Exception as e:

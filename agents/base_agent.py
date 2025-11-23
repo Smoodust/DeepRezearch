@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Any, List
+from typing import Any
 
-from langchain_core.tools import BaseTool
 
 
 class BaseAgent(ABC):

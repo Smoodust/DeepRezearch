@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Any, List, TypedDict, Optional, Dict
-from enum import Enum 
+from enum import Enum
+from typing import Any, Dict, List, Optional, TypedDict
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -53,7 +53,7 @@ class WorkflowStep(str, Enum):
     REVIEW = "review"
     REFLECTION = "reflection"
     FINAL = "final"
-    
+
 
 class CodePlan(BaseModel):
     steps: List[str] = Field(description="Step-by-step implementation plan")
@@ -79,11 +79,12 @@ class CodeReview(BaseModel):
     security_concerns: List[str] = Field(description="list of security issues")
     overall_quality: int = Field(description="rating from 1-10", ge=1, le=10)
 
-    @field_validator('issues', 'suggestions', 'security_concerns')
+    @field_validator("issues", "suggestions", "security_concerns")
     def validate_list_contents(cls, v):
         if v is None:
             return []
-        return 
+        return
+
 
 class OverallCode(BaseModel):
     analysis: CodeAnalysis
@@ -110,5 +111,5 @@ class CodeWorkflowState(BaseModel):
     max_retries: int = Field(default=3)
 
     # Metadata
-    #execution_time: float = Field(default=0.0)
+    # execution_time: float = Field(default=0.0)
     metadata: Dict[str, Any] = Field(default_factory=dict)

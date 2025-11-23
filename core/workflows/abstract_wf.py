@@ -1,12 +1,14 @@
 from abc import ABC, abstractmethod
+
 from langgraph.graph import StateGraph
+
 from agents.base_agent import BaseAgent
 
 
 class BaseWorkflow(ABC):
-    def __init__(self, agent: BaseAgent): 
+    def __init__(self, agent: BaseAgent):
         self.agent = agent
-        self._compiled_graph = None  
+        self._compiled_graph = None
 
     @abstractmethod
     def build_graph(self) -> StateGraph:

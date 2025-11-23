@@ -1,7 +1,9 @@
-from .abstract_wf import BaseWorkflow
-from langgraph.graph import StateGraph, END
+from langgraph.graph import END, StateGraph
+
 from agents.coding_agent import CodingAgent
-from core.state import WorkflowStep, CodeWorkflowState
+from core.state import CodeWorkflowState, WorkflowStep
+
+from .abstract_wf import BaseWorkflow
 
 
 class CodeWorkflow(BaseWorkflow):
@@ -16,8 +18,7 @@ class CodeWorkflow(BaseWorkflow):
         builder.add_node("review_code", self._review_code)
         builder.add_node("reflect", self._reflect)
         builder.add_node("finalize", self._finalize)
-        
-        
+
         builder.set_entry_point("analyze")
 
         builder.add_edge("analyze", "generate_code")
@@ -25,14 +26,11 @@ class CodeWorkflow(BaseWorkflow):
         builder.add_conditional_edges(
             "review_code",
             self._should_reflect,
-            {
-                "reflect": "reflect",
-                "finalize": "finalize"
-            }
+            {"reflect": "reflect", "finalize": "finalize"},
         )
         builder.add_edge("reflect", "generate_code")
         builder.add_edge("finalize", END)
-        
+
         return builder
 
     async def _analyze_task(self, state: CodeWorkflowState) -> CodeWorkflowState:
@@ -70,19 +68,19 @@ class CodeWorkflow(BaseWorkflow):
     def _reflect(self, state: CodeWorkflowState) -> CodeWorkflowState:
         state.current_step = WorkflowStep.REFLECTION
         state.retry_count += 1
-        
+
         if state.review and not state.review.approved:
             state.metadata["feedback"] = state.review.suggestions
             state.needs_retry = True
         return state
-    
+
     def _should_reflect(self, state: CodeWorkflowState) -> str:
         if state.review is None:
             return "finalize"
-        
+
         if not state.review.approved and state.retry_count < state.max_retries:
             return "reflect"
-        return "finalize"    
+        return "finalize"
 
     def _finalize(self, state: CodeWorkflowState) -> CodeWorkflowState:
         state.current_step = WorkflowStep.FINAL
@@ -90,7 +88,6 @@ class CodeWorkflow(BaseWorkflow):
             state.final_result = {
                 "analysis": state.analysis,
                 "code": state.generated_code,
-                "review": state.review
+                "review": state.review,
             }
         return state
-

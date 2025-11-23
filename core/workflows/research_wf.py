@@ -1,7 +1,8 @@
-from .abstract_wf import BaseWorkflow
-from langgraph.graph import StateGraph
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel
-from typing import List, Dict, Optional, Any
+
+from .abstract_wf import BaseWorkflow
 
 
 class ResearchWorkflowState(BaseModel):
@@ -10,17 +11,19 @@ class ResearchWorkflowState(BaseModel):
     findings: List[Dict] = []
     analysis: Optional[str] = None
 
+
 class ResearchWorkflow(BaseWorkflow):
     def __init__(self, agent: Any):
         super().__init__(agent)
         # В будущем здесь может быть вызов CodingWorkflow!
-        
+
     def build_graph(self):
         # Заглушка - будет реализована позже
         from langgraph.graph import StateGraph
+
         builder = StateGraph(ResearchWorkflowState)
         # ... здесь будет граф research workflow
         return builder
-        
+
     async def run(self, user_input: str):
         return f"Research workflow выполнил исследование по теме: {user_input}. [Это заглушка]"

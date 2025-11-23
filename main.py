@@ -1,13 +1,13 @@
 import asyncio
-import sys
 import os
+import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from core.workflows.coding_wf import CodeWorkflow
-from core.workflows.research_wf import ResearchWorkflow
 from agents.coding_agent import CodingAgent
 from core.orchestrator import WorkflowOrchestrator
+from core.workflows.coding_wf import CodeWorkflow
+from core.workflows.research_wf import ResearchWorkflow
 
 
 class TestOrchestrator:
@@ -30,7 +30,7 @@ class TestOrchestrator:
         """Run test scenarios"""
 
         test_cases = [
-            #"Hi! How are you?",
+            # "Hi! How are you?",
             "Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
             "Research modern approaches to machine learning",
             "Explain what polymorphism is in OOP",
