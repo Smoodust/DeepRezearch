@@ -1,11 +1,12 @@
-from typing_extensions import TypedDict
+import operator
+from typing import Annotated, List, cast
+
 from langchain.chat_models import init_chat_model
+from langchain.messages import HumanMessage, SystemMessage
+from langgraph.graph import END, START, StateGraph
 from langgraph.types import Send
 from pydantic import BaseModel, Field
-from typing import Annotated, List, cast
-from langgraph.graph import StateGraph, START, END
-from langchain.messages import HumanMessage, SystemMessage
-import operator
+from typing_extensions import TypedDict
 
 model_name = "deepseek-r1:7b"
 llm = init_chat_model(model_name, model_provider="ollama")
@@ -52,12 +53,15 @@ def orchestrator(state: State):
     """Orchestrator that generates a plan for the report"""
 
     # Generate queries
-    report_sections = cast(Sections, planner.invoke(
-        [
-            SystemMessage(content="Generate a plan for the report."),
-            HumanMessage(content=f"Here is the report topic: {state['topic']}"),
-        ]
-    ))
+    report_sections = cast(
+        Sections,
+        planner.invoke(
+            [
+                SystemMessage(content="Generate a plan for the report."),
+                HumanMessage(content=f"Here is the report topic: {state['topic']}"),
+            ]
+        ),
+    )
 
     return {"sections": report_sections.sections}
 
@@ -122,4 +126,4 @@ orchestrator_worker = orchestrator_worker_builder.compile()
 
 
 # Invoke
-state = orchestrator_worker.invoke({"topic": "Create a report on LLM scaling laws"}) #type: ignore
+state = orchestrator_worker.invoke({"topic": "Create a report on LLM scaling laws"})  # type: ignore
