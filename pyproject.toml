@@ -9,6 +9,7 @@ dependencies = [
     "ddgs>=9.7.1",
     "langchain>=1.0.3",
     "langchain-community>=0.4.1",
+    "langchain-experimental>=0.4.0",
     "langchain-ollama>=1.0.0",
     "langgraph>=1.0.2",
     "reportlab>=4.4.4",
