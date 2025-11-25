@@ -1,13 +1,15 @@
-from langchain.chat_models import init_chat_model
-from langgraph.graph import StateGraph, START, END
-from typing_extensions import TypedDict, Literal, cast, Annotated
-from langchain.messages import HumanMessage, SystemMessage
-from pydantic import BaseModel, Field
-from prompt import *
 import operator
+
+from langchain.chat_models import init_chat_model
+from langchain.messages import HumanMessage, SystemMessage
+from langgraph.graph import END, START, StateGraph
+from prompt import *
+from pydantic import BaseModel, Field
+from typing_extensions import Annotated, Literal, TypedDict, cast
 
 model_name = "deepseek-r1:7b"
 llm = init_chat_model(model_name, model_provider="ollama")
+
 
 class OrchestratorAnswer(BaseModel):
     reasoning: str = Field(
@@ -20,7 +22,9 @@ class OrchestratorAnswer(BaseModel):
         description="Explanation of what this workflow would do. If search then what search query should they use and researh overall. If coding what code they need to write."
     )
 
+
 orchestrator = llm.with_structured_output(OrchestratorAnswer)
+
 
 class State(TypedDict):
     request: str
@@ -29,19 +33,19 @@ class State(TypedDict):
     next_workflow_task: str
     final_report: str
 
+
 def make_context(system_prompt, user_prompt, garbage_context, n=3):
-    context = [
-        SystemMessage(system_prompt)
-    ]
+    context = [SystemMessage(system_prompt)]
     context += [HumanMessage(x) for x in garbage_context[-n:]]
     context.append(HumanMessage(user_prompt))
     return context
+
 
 def llm_orchestrator(state: State):
     context = make_context(
         orchestrator_system_prompt,
         orchestrator_user_prompt.format(user_input=state["request"]),
-        state["garbage_context"][-3:]
+        state["garbage_context"][-3:],
     )
     decision = cast(OrchestratorAnswer, orchestrator.invoke(context))
     print(decision)
@@ -60,7 +64,7 @@ def synthesizer(state: State):
     context = make_context(
         synthesizer_system_prompt,
         synthesizer_user_prompt.format(user_input=state["request"]),
-        state["garbage_context"][-3:]
+        state["garbage_context"][-3:],
     )
     return {"final_report": llm.invoke(context).content}
 
