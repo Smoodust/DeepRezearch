@@ -11,18 +11,22 @@ llm = init_chat_model(model_name, model_provider="ollama")
 
 class OrchestratorAnswer(BaseModel):
     reasoning: str = Field(
-        description="Brief thinking and explanation of classification",
+        description="Brief thinking and explanation of classification. You should reason why you choose this workflow.",
     )
-    workflow_type: Literal["coding", "research", "synthesize"] = Field(
+    workflow_type: Literal["coding", "search", "synthesize"] = Field(
         None, description="The next chosen workflow in the process" #type:ignore
+    )
+    workflow_task: str = Field(
+        description="Explanation of what this workflow would do. If search then what search query should they use and researh overall. If coding what code they need to write."
     )
 
 orchestrator = llm.with_structured_output(OrchestratorAnswer)
 
 class State(TypedDict):
-    next_step: Literal["coding", "research", "synthesize"]
     request: str
     garbage_context: Annotated[list[str], operator.add]
+    next_step: Literal["coding", "search", "synthesize"]
+    next_workflow_task: str
     final_report: str
 
 def make_context(system_prompt, user_prompt, garbage_context, n=3):
@@ -41,7 +45,7 @@ def llm_orchestrator(state: State):
     )
     decision = cast(OrchestratorAnswer, orchestrator.invoke(context))
     print(decision)
-    return {"next_step": decision.workflow_type}
+    return {"next_step": decision.workflow_type, "next_workflow_task": decision.workflow_task}
 
 
 def coding(state: State):
@@ -76,7 +80,7 @@ deep_researcher_builder.add_edge(START, "orchestrator")
 deep_researcher_builder.add_conditional_edges(
     "orchestrator",
     should_continue,
-    {"coding": "coding", "searching": "searching", "synthesizer": "synthesizer"},
+    {"coding": "coding", "search": "searching", "synthesizer": "synthesizer"},
 )
 deep_researcher_builder.add_edge("coding", "orchestrator")
 deep_researcher_builder.add_edge("searching", "orchestrator")
