@@ -36,6 +36,7 @@ class CodeWorkflow(BaseWorkflow):
     async def _analyze_task(self, state: CodeWorkflowState) -> CodeWorkflowState:
         try:
             state.current_step = WorkflowStep.ANALYSIS
+            print("analyze step")
             state.analysis = await self.agent.analyze(state.user_input)
         except Exception as e:
             raise e
@@ -57,6 +58,7 @@ class CodeWorkflow(BaseWorkflow):
     async def _review_code(self, state: CodeWorkflowState) -> CodeWorkflowState:
         try:
             state.current_step = WorkflowStep.REVIEW
+            print("review step")
             if state.analysis and state.generated_code:
                 state.review = await self.agent.review(
                     state.generated_code, state.analysis
@@ -69,6 +71,7 @@ class CodeWorkflow(BaseWorkflow):
         state.current_step = WorkflowStep.REFLECTION
         state.retry_count += 1
 
+        print("reflect step")
         if state.review and not state.review.approved:
             state.metadata["feedback"] = state.review.suggestions
             state.needs_retry = True
@@ -79,11 +82,13 @@ class CodeWorkflow(BaseWorkflow):
             return "finalize"
 
         if not state.review.approved and state.retry_count < state.max_retries:
+            print("shoud reflect step")
             return "reflect"
         return "finalize"
 
     def _finalize(self, state: CodeWorkflowState) -> CodeWorkflowState:
         state.current_step = WorkflowStep.FINAL
+        print("finalyze  step")
         if state.analysis and state.generated_code and state.review:
             state.final_result = {
                 "analysis": state.analysis,
