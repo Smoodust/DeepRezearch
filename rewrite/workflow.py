@@ -1,16 +1,16 @@
 import operator
+import re
+import time
 
+import requests
+from ddgs import DDGS
+from html_to_markdown import ConversionOptions, convert
 from langchain.chat_models import init_chat_model
 from langchain.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 from prompt import *
 from pydantic import BaseModel, Field
 from typing_extensions import Annotated, Literal, TypedDict, cast
-from html_to_markdown import convert, ConversionOptions
-from ddgs import DDGS
-import requests
-import re
-import time
 
 options = ConversionOptions()
 options.extract_metadata = False
@@ -43,6 +43,7 @@ class State(TypedDict):
     next_workflow_task: str
     content_to_parse: list[str]
     final_report: str
+
 
 class UrlWorkerState(TypedDict):
     content: str
@@ -80,15 +81,24 @@ def searching(state: State):
     for x in search_results:
         time.sleep(0.5)
         url = x.get("href", None)
-        r = requests.get(url, headers={"User-Agent": "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"})
+        r = requests.get(
+            url,
+            headers={
+                "User-Agent": "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
+            },
+        )
         results.append(r.text)
     return {}
 
+
 def extract_text_from_search(state: UrlWorkerState):
     markdown = convert(r.text, options)
-    markdown = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', markdown)
+    markdown = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", markdown)
 
-    context = make_context(site_extraction_system_prompt, site_extraction_user_prompt.format(markdown_site=markdown))
+    context = make_context(
+        site_extraction_system_prompt,
+        site_extraction_user_prompt.format(markdown_site=markdown),
+    )
     summary = llm.invoke(context).content
     return {"garbage_context": [summary]}
 
