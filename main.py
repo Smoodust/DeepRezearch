@@ -48,7 +48,7 @@ class TestOrchestrator:
                 logger.success(f"  Workflow: {result['decision'].workflow_type}")
                 logger.success(f"  Reasoning: {result['decision'].reasoning}")
                 logger.success(f"  Confidence: {result['decision'].confidence:.2f}")
-                
+
                 print(f"{result["result"]}")
 
             except Exception as e:
@@ -77,10 +77,10 @@ class TestOrchestrator:
                 logger.success(f"   💭 Reasoning: {result['decision'].reasoning}")
                 logger.success(f"   ✅ Confidence: {result['decision'].confidence:.2f}")
                 logger.success(f"\n   📝 Response:")
-                
-                if isinstance(result['result'], list):
+
+                if isinstance(result["result"], list):
                     logger.success(f"  Streamed {len(result['result'])} chunks:")
-                    for i, chunk in enumerate(result['result']):
+                    for i, chunk in enumerate(result["result"]):
                         logger.success(f"    Chunk {i+1}: {chunk}")
                 else:
                     logger.success(f"  Result: {result['result']}")
