@@ -28,13 +28,13 @@ class TestOrchestrator:
         test_cases = [
             # "Hi! How are you?",
             "Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
-            #"Research modern approaches to machine learning",
-            #"Explain what polymorphism is in OOP",
-            #"Create a class for working with SQLite database",
-            #"Analyze the advantages and disadvantages of microservices architecture",
-            #"Write tests for calculate_average function",
-            #"How does garbage collection work in Python?",
-            #"Implement a REST API endpoint for user authentication",
+            # "Research modern approaches to machine learning",
+            # "Explain what polymorphism is in OOP",
+            # "Create a class for working with SQLite database",
+            # "Analyze the advantages and disadvantages of microservices architecture",
+            # "Write tests for calculate_average function",
+            # "How does garbage collection work in Python?",
+            # "Implement a REST API endpoint for user authentication",
         ]
 
         for i, user_input in enumerate(test_cases, 1):

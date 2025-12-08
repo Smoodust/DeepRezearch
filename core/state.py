@@ -75,6 +75,7 @@ class CodeAnalysis(BaseModel):
 class Code(BaseModel):
     code: str = Field(description="Code written by agent")
 
+
 class CodeReview(BaseModel):
     approved: bool = Field(description="approved or not approved code")
     issues: List[str] = Field(description="list of identified problems")

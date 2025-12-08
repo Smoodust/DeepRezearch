@@ -1,4 +1,3 @@
-
 import requests
 
 # results = DDGS().text("python programming", max_results=5)
