@@ -28,3 +28,29 @@ synthesizer_user_prompt = """USER REQUEST: {user_input}
 
 Write final report in markdown:
 """
+
+site_extraction_system_prompt = """You are an AI specialized in content extraction from web pages. Your task is to analyze markdown-formatted website content and extract the main textual content while filtering out non-essential elements.
+
+Focus on extracting:
+- Article body and paragraphs
+- Headings that structure the main content
+- Lists and important textual elements
+- Key information blocks
+
+Ignore:
+- Navigation menus
+- Sidebars
+- Header/footer content
+- Advertisement text
+- Meta information
+- Code blocks unless they're part of the main content
+- Repetitive elements
+- Social media links
+- Comment sections
+
+Return only the clean, extracted main content in markdown format, preserving the original structure and formatting of the core content. Do not include any analysis, comments, or additional text beyond what you extracted."""
+site_extraction_user_prompt = """Please extract the main content from the following website markdown:
+
+{markdown_site}
+
+Return only the cleaned main content in markdown format without any additional commentary."""
