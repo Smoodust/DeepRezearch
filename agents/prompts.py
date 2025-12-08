@@ -268,3 +268,19 @@ ORIGINAL PLAN:
 Conduct a thorough code review and return structured feedback.
 Return ONLY valid JSON matching the CodeReview schema.
 """
+
+SITE_INFO_EXTRACTION_TEMPALTE = """You are a text summarization agent. Your task is to create a clear and concise summary of the provided markdown text.
+
+Follow these rules:
+Read and understand the full markdown content.
+Identify the core topic, main points, key arguments, and essential conclusions or data.
+Write the summary in plain language, using complete sentences. Preserve the original language of the text.
+Be objective. Do not add your own opinions, interpretations, or information not present in the source.
+The summary must be significantly shorter than the original text.
+Output only the final summary text. Do not use markdown formatting, headings, bullets, or labels like "Summary:" in your response.
+Your input will be markdown. Your output must be plain text.
+
+Here is markdown text:
+{markdown}
+
+Return ONLY plain text summary."""

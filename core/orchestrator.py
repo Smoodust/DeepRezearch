@@ -130,18 +130,6 @@ DO NOT include code examples.
             else:
                 return "Coding workflow is not registered"
 
-        """
-        elif decision.workflow_type == "research":
-            if "research" in self.workflows:
-                return await self.workflows["research"].run(user_input)
-            else:
-                return "Research workflow is not registered"
-        
-
-        else:
-            return f"Unknown workflow type: {decision.workflow_type}"
-        """
-
     async def _handle_direct_response(self, user_input: str) -> str:
         """Handle direct requests without specialized workflows"""
 
