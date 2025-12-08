@@ -1,6 +1,5 @@
-from typing import List
-from loguru import logger
 import traceback
+from typing import List
 
 from langchain.agents import create_agent
 from langchain.agents.structured_output import ToolStrategy
@@ -9,26 +8,15 @@ from langchain_core.messages import HumanMessage
 from langchain_core.tools import Tool
 from langchain_experimental.utilities import PythonREPL
 from langchain_ollama import ChatOllama
-
 from langgraph.graph import END, StateGraph
-from core.state import (
-    CodeWorkflowState,
-    WorkflowStep,
-    CodeAnalysis,
-    Code,
-    CodeReview,
-    OverallCode,
-)
+from loguru import logger
+
+from core.state import (Code, CodeAnalysis, CodeReview, CodeWorkflowState,
+                        OverallCode, WorkflowStep)
 
 from .base_agent import BaseAgent
-from .prompts import (
-    CODE_GENERATION_PROMPT,
-    CODE_GENERATION_TEMPLATE,
-    CODE_REVIEW_PROMPT,
-    CODE_REVIEW_TEMPLATE,
-    CODING_ANALYSIS_PROMPT,
-    TASK_ANALYSIS_TEMPLATE,
-)
+from .prompts import (CODE_GENERATION_PROMPT, CODE_GENERATION_TEMPLATE,
+                      CODE_REVIEW_TEMPLATE, TASK_ANALYSIS_TEMPLATE)
 
 
 class CodingAgent(BaseAgent):
@@ -74,7 +62,9 @@ class CodingAgent(BaseAgent):
 
             return response
         except Exception as e:
-            logger.error(f"[{self.name}] ❌ Ошибка в analyze(): {type(e).__name__}: {e}")
+            logger.error(
+                f"[{self.name}] ❌ Ошибка в analyze(): {type(e).__name__}: {e}"
+            )
             logger.error(f"[{self.name}] 📋 Трассировка:\n{traceback.format_exc()}")
             raise RuntimeError(f"Failed to analyze task: {str(e)}")
 
@@ -100,7 +90,9 @@ class CodingAgent(BaseAgent):
             return structured_response
 
         except Exception as e:
-            logger.error(f"[{self.name}] ❌ Ошибка генерации кода: {type(e).__name__}: {e}")
+            logger.error(
+                f"[{self.name}] ❌ Ошибка генерации кода: {type(e).__name__}: {e}"
+            )
             raise RuntimeError(f"Failed to generate code: {str(e)}")
 
     async def review(self, code: Code, analysis: CodeAnalysis) -> CodeReview:
@@ -115,8 +107,10 @@ class CodingAgent(BaseAgent):
         try:
             response = await self.review_agent.ainvoke(review_prompt)
             logger.success(f"[{self.name}] ✅ Ревью завершено")
-            logger.debug(f"[{self.name}] 📊 Результат ревью: approved={response.approved}, качество={response.overall_quality}")
-            
+            logger.debug(
+                f"[{self.name}] 📊 Результат ревью: approved={response.approved}, качество={response.overall_quality}"
+            )
+
             return response
         except Exception as e:
             logger.error(f"[{self.name}] ❌ Ошибка ревью кода: {type(e).__name__}: {e}")
@@ -166,9 +160,7 @@ class CodingAgent(BaseAgent):
             state.current_step = WorkflowStep.GENERATION
             if state.analysis:
                 feedback = state.metadata.get("feedback", [])
-                state.generated_code = await self.generate(
-                    state.analysis, feedback
-                )
+                state.generated_code = await self.generate(state.analysis, feedback)
             state.error = None
         except Exception as e:
             raise e
@@ -179,9 +171,7 @@ class CodingAgent(BaseAgent):
             state.current_step = WorkflowStep.REVIEW
             print("review step")
             if state.analysis and state.generated_code:
-                state.review = await self.review(
-                    state.generated_code, state.analysis
-                )
+                state.review = await self.review(state.generated_code, state.analysis)
         except Exception as e:
             raise e
         return state

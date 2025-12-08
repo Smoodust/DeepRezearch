@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any
+
 from langgraph.graph import StateGraph
 
 
@@ -10,7 +11,7 @@ class BaseAgent(ABC):
     @abstractmethod
     async def execute(self, context: Any) -> Any:
         pass
-    
+
     @abstractmethod
     def build_graph(self) -> StateGraph:
         pass
