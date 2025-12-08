@@ -3,6 +3,7 @@ from typing import Any, Dict
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import SystemMessage
+from loguru import logger
 from pydantic import BaseModel, Field
 
 
@@ -64,20 +65,35 @@ DO NOT include code examples.
     """
 
         try:
+            """
             response = await self.model.ainvoke(
                 [
                     SystemMessage(content=self.system_prompt),
                     SystemMessage(content=analysis_prompt),
                 ]
             )
+            """
+            request = [
+                SystemMessage(content=self.system_prompt),
+                SystemMessage(content=analysis_prompt),
+            ]
+
+            response_chunks = []
+
+            async for chunk in self.model.astream(request):
+                if hasattr(chunk, "content"):
+                    print(chunk.content, end="", flush=True)
+                    response_chunks.append(chunk.content)
+
+            response = "".join(response_chunks)
 
             # Очистка и парсинг ответа
-            content = response.content.strip()
+            # content = response.content.strip()
 
             # Извлечение JSON из ответа
             import re
 
-            json_match = re.search(r"\{.*\}", content, re.DOTALL)
+            json_match = re.search(r"\{.*\}", response, re.DOTALL)
             if json_match:
                 content = json_match.group()
 
@@ -91,6 +107,7 @@ DO NOT include code examples.
             return OrchestratorDecision(**decision_data)
 
         except Exception as e:
+            logger.error(f"{e}")
             # Fallback decision on error с ВСЕМИ обязательными полями
             return OrchestratorDecision(
                 workflow_type="research",
@@ -113,14 +130,17 @@ DO NOT include code examples.
             else:
                 return "Coding workflow is not registered"
 
+        """
         elif decision.workflow_type == "research":
             if "research" in self.workflows:
                 return await self.workflows["research"].run(user_input)
             else:
                 return "Research workflow is not registered"
+        
 
         else:
             return f"Unknown workflow type: {decision.workflow_type}"
+        """
 
     async def _handle_direct_response(self, user_input: str) -> str:
         """Handle direct requests without specialized workflows"""
@@ -133,15 +153,30 @@ QUESTION: {user_input}
 
 Answer clearly and to the point.
 """
-
+        """
         response = await self.model.ainvoke(
             [
                 SystemMessage(content=self.system_prompt),
                 SystemMessage(content=direct_prompt),
             ]
         )
+        """
 
-        return response.content
+        request = [
+            SystemMessage(content=self.system_prompt),
+            SystemMessage(content=direct_prompt),
+        ]
+
+        response_chunks = []
+
+        async for chunk in self.model.astream(request):
+            if hasattr(chunk, "content"):
+                print(chunk.content, end="", flush=True)
+                response_chunks.append(chunk.content)
+
+        response = "".join(response_chunks)
+
+        return response
 
     async def process_request(
         self, user_input: str, context: Dict = None

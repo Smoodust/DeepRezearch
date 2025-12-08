@@ -72,6 +72,10 @@ class CodeAnalysis(BaseModel):
     assumptions: List[str] = Field(description="Any assumptions made during analysis")
 
 
+class Code(BaseModel):
+    code: str = Field(description="Code written by agent")
+
+
 class CodeReview(BaseModel):
     approved: bool = Field(description="approved or not approved code")
     issues: List[str] = Field(description="list of identified problems")
@@ -88,7 +92,7 @@ class CodeReview(BaseModel):
 
 class OverallCode(BaseModel):
     analysis: CodeAnalysis
-    code: str
+    code: Code
     review: CodeReview
 
 
@@ -101,7 +105,7 @@ class CodeWorkflowState(BaseModel):
 
     # Workflow data
     analysis: Optional[CodeAnalysis] = Field(default=None)
-    generated_code: Optional[str] = Field(default=None)
+    generated_code: Optional[Code] = Field(default=None)
     review: Optional[CodeReview] = Field(default=None)
     final_result: Optional[OverallCode] = Field(default=None)
 

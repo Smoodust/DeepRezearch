@@ -26,7 +26,7 @@ class OrchestratorAnswer(BaseModel):
         description="Brief thinking and explanation of classification. You should reason why you choose this workflow.",
     )
     workflow_type: Literal["coding", "search", "synthesize"] = Field(
-        None, description="The next chosen workflow in the process" #type:ignore
+        None, description="The next chosen workflow in the process"  # type:ignore
     )
     workflow_task: str = Field(
         description="Explanation of what this workflow would do. If search then what search query should they use and researh overall. If coding what code they need to write."
@@ -64,7 +64,10 @@ def llm_orchestrator(state: State):
     )
     decision = cast(OrchestratorAnswer, orchestrator.invoke(context))
     print(decision)
-    return {"next_step": decision.workflow_type, "next_workflow_task": decision.workflow_task}
+    return {
+        "next_step": decision.workflow_type,
+        "next_workflow_task": decision.workflow_task,
+    }
 
 
 def coding(state: State):
