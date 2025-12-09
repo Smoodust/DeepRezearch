@@ -6,7 +6,6 @@ from loguru import logger
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from agents.coding_agent import CodingAgent
 from agents.research_agent import ResearchAgent
 from core.orchestrator import WorkflowOrchestrator
 
@@ -19,10 +18,12 @@ class TestOrchestrator:
         """Initialize all workflows"""
 
         # Initialize coding workflow
-        #coding_agent = CodingAgent(name="python_coder", model_name="llama3.1:8b")
-        #self.orchestrator.register_workflow("coding", coding_agent)
+        # coding_agent = CodingAgent(name="python_coder", model_name="llama3.1:8b")
+        # self.orchestrator.register_workflow("coding", coding_agent)
 
-        search_agent = ResearchAgent(name="researcher", model_name="llama3.1:8b", max_result=5)
+        search_agent = ResearchAgent(
+            name="researcher", model_name="llama3.1:8b", max_result=5
+        )
         self.orchestrator.register_workflow("research", search_agent)
 
     async def run_test_cases(self):

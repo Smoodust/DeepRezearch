@@ -53,14 +53,14 @@ class ResearchAgent(BaseAgent):
         response = await self.model.ainvoke(context)
         document: SearchedDocument = {
             "url": state["url"],
-            "source": state["source"], 
-            "extracted_info": cast(str, response.content)
+            "source": state["source"],
+            "extracted_info": cast(str, response.content),
         }
         return {"searched_documents": [document]}
-    
+
     def search_map(self, state: SearchWorkflowState):
         return [Send("extract_info", d) for d in state["sources"]]
-    
+
     @abstractmethod
     def build_graph(self) -> StateGraph:
         builder = StateGraph(SearchWorkflowState)
