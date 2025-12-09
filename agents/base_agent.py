@@ -9,10 +9,6 @@ class BaseAgent(ABC):
         self._compiled_graph = None
 
     @abstractmethod
-    async def execute(self, context: Any) -> Any:
-        pass
-
-    @abstractmethod
     def build_graph(self) -> StateGraph:
         pass
 

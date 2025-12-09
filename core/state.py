@@ -1,6 +1,6 @@
-from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, TypedDict
+import operator
+from typing import Annotated, Any, Dict, List, Optional, TypedDict
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -11,32 +11,18 @@ class RawDocument(TypedDict):
     url: str
     source: str
 
-
 class SearchedDocument(TypedDict):
     url: str
     source: str
     extracted_info: str
 
+class SearchedCollection(TypedDict):
+    searched_documents: list[SearchedDocument]
 
-class OverallState(BaseModel):
-    messages: List[Any] = Field(default_factory=list)
-    web_research_result: list[SearchedDocument] = Field(default_factory=list)
-    initial_search_query_count: int = 3
-    max_research_loops: int = 5
-    research_loop_count: int = 0
-
-
-class ReflectionState(TypedDict):
-    is_sufficient: bool
-    knowledge_gap: str
-    follow_up_queries: List[str]
-    research_loop_count: int
-    number_of_ran_queries: int
-
-
-@dataclass(kw_only=True)
-class SearchStateOutput:
-    running_summary: str = field(default=None)
+class SearchWorkflowState(TypedDict):
+    search_query: str
+    sources: list[RawDocument]  
+    searched_documents: Annotated[list[SearchedDocument], operator.add] 
 
 
 ############# CODER ################

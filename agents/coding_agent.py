@@ -116,13 +116,6 @@ class CodingAgent(BaseAgent):
             logger.error(f"[{self.name}] ❌ Ошибка ревью кода: {type(e).__name__}: {e}")
             raise RuntimeError(f"Failed to review code: {str(e)}")
 
-    async def execute(self, context: str) -> OverallCode:
-        analysis = await self.analyze(context)
-        code = await self.generate(analysis)
-        review = await self.review(code, analysis)
-
-        return OverallCode(analysis=analysis, code=code, review=review)
-
     def build_graph(self) -> StateGraph:
         builder = StateGraph(CodeWorkflowState)
 

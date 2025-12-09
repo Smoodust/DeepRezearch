@@ -129,6 +129,12 @@ DO NOT include code examples.
                 return await self.workflows["coding"].run(state)
             else:
                 return "Coding workflow is not registered"
+        if decision.workflow_type == "research":
+            if "research" in self.workflows:
+                state = {"search_query": user_input}
+                return await self.workflows["research"].run(state)
+            else:
+                return "Research workflow is not registered"
 
     async def _handle_direct_response(self, user_input: str) -> str:
         """Handle direct requests without specialized workflows"""
