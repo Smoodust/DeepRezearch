@@ -19,12 +19,19 @@ options.autolinks = False
 
 
 class ResearchAgent(BaseAgent):
-    def __init__(self, name: str, model_name: str, max_result: int):
-        self.name = name
+    def __init__(self, model_name: str, max_result: int):
         self.model_name = model_name
         self.model = init_chat_model(model_name, model_provider="ollama")
         self.max_result = max_result
         self._compiled_graph = None
+    
+    @property
+    def name(self):
+        return "research"
+
+    @property
+    def purpose(self):
+        return "For information gathering: research, analysis, data collection, comparative studies."
 
     def searching(self, state: SearchWorkflowState) -> SearchWorkflowState:
         search_results = DDGS().text(state["search_query"], max_results=self.max_result)  # type: ignore

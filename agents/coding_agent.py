@@ -20,10 +20,9 @@ from .prompts import (CODE_GENERATION_PROMPT, CODE_GENERATION_TEMPLATE,
 
 
 class CodingAgent(BaseAgent):
-    def __init__(self, name: str, model_name: str):
+    def __init__(self, model_name: str):
         super().__init__()
 
-        self.name = name
         self.model_name = model_name
         self.model = init_chat_model(model_name, model_provider="ollama")
         self.tools = [
@@ -37,6 +36,14 @@ class CodingAgent(BaseAgent):
         self.analysis_agent = self.model.with_structured_output(CodeAnalysis)
         self.review_agent = self.model.with_structured_output(CodeReview)
         self.generation_agent = self._create_generation_agent()
+    
+    @property
+    def name(self):
+        return "coding"
+
+    @property
+    def purpose(self):
+        return "For ACTUAL programming tasks: writing code, debugging, code review, implementation, optimization, leetcode tasks."
 
     def _create_generation_agent(self):
         model = ChatOllama(

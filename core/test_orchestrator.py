@@ -18,19 +18,46 @@ class OrchestratorDecision(BaseModel):
         default=False, description="Whether additional information is needed"
     )
 
-class WorkflowOrchestrator:
+
+class TestWorkflowOrchestrator:
     def __init__(self, model: str = "qwen3:0.6b"):
         self.model = init_chat_model(model, model_provider="ollama")
         self.workflows: Dict[str, Any] = {}
+        self._setup_prompts()
 
     def register_workflow(self, name: str, workflow: Any):
         """Register a workflow with the orchestrator"""
         self.workflows[name] = workflow
 
+    def _setup_prompts(self):
+        self.system_prompt = """You are a routing assistant for a multi-agent system. Your ONLY job is to analyze user requests and classify them into the appropriate workflow category.
+
+AVAILABLE WORKFLOWS:
+1. **coding** - For ACTUAL programming tasks: writing code, debugging, code review, implementation, optimization, leetcode tasks
+2. **research** - For information gathering: research, analysis, data collection, comparative studies
+
+IMPORTANT RULES:
+- You are NOT a coding expert - DO NOT provide code solutions or technical implementations
+- You are NOT a research assistant - DO NOT provide detailed analysis or research findings  
+- You are ONLY a classifier - your response should ONLY contain the workflow decision
+- NEVER write code, NEVER solve problems, NEVER provide detailed answers
+- Your output MUST be valid JSON format ONLY - no additional text
+
+CRITICAL: You MUST respond with ONLY a JSON object in this exact format:
+{
+    "workflow_type": "coding|research",
+    "reasoning": "brief explanation of classification",
+    "confidence": 0.0-1.0,
+    "needs_additional_info": false
+}
+
+DO NOT add any other text, explanations, or answers before or after the JSON.
+DO NOT use markdown formatting.
+DO NOT include code examples.
+"""
+
     async def analyze_request(self, user_input: str) -> OrchestratorDecision:
         """Analyze the request and make routing decision"""
-
-        system_prompt = workflow_system_prompt.format()
 
         analysis_prompt = f"""
     USER REQUEST: {user_input}
