@@ -1,53 +1,68 @@
 import json
-from typing import Any, Dict
+from typing import Annotated, Any, Dict, TypedDict
 
+import re
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import SystemMessage
+from agents.base_agent import BaseAgent
 from loguru import logger
 from pydantic import BaseModel, Field
+from langgraph.graph.message import add_messages, BaseMessage
+from langgraph.types import Overwrite
 from ..agents.prompts import workflow_system_prompt
 
 
 class OrchestratorDecision(BaseModel):
     """Model for orchestrator routing decision"""
 
-    workflow_type: str = Field(description="Type of workflow: 'coding', 'research'")
+    workflow_type: str = Field(description="Type of workflow")
     reasoning: str = Field(description="Reasoning behind the decision")
     confidence: float = Field(description="Confidence score from 0 to 1")
-    needs_additional_info: bool = Field(
-        default=False, description="Whether additional information is needed"
-    )
+    workflow_input: str = Field(description="Command or request that this workflow should do")
+
+class OrchestratorState(TypedDict):
+    user_input: str
+
+    last_judged_workflow: OrchestratorDecision
+    messages: Annotated[list[BaseMessage], add_messages]
 
 class WorkflowOrchestrator:
     def __init__(self, model: str = "qwen3:0.6b"):
         self.model = init_chat_model(model, model_provider="ollama")
-        self.workflows: Dict[str, Any] = {}
+        self.workflows: Dict[str, BaseAgent] = {}
 
-    def register_workflow(self, name: str, workflow: Any):
+    def register_workflow(self, workflow: BaseAgent):
         """Register a workflow with the orchestrator"""
-        self.workflows[name] = workflow
+        self.workflows[workflow.name] = workflow
+    
+    @property
+    def workflows_list(self) -> str:
+        results = []
+        for index, x in enumerate(self.workflows.values()):
+            results.append(f"{index+1}. {x.name} - {x.purpose}")
+        return "\n".join(results)
+    
+    @property
+    def workflow_variants(self) -> str:
+        return "|".join([x for x in self.workflows.keys()])
+    
+    @property
+    def system_prompt(self) -> str:
+        return workflow_system_prompt.format(workflows_list=self.workflows_list, workflow_variants=self.workflow_variants)
 
-    async def analyze_request(self, user_input: str) -> OrchestratorDecision:
+
+    async def analyze_request(self, state: OrchestratorState) -> OrchestratorState:
         """Analyze the request and make routing decision"""
 
-        system_prompt = workflow_system_prompt.format()
-
         analysis_prompt = f"""
-    USER REQUEST: {user_input}
+    USER REQUEST: {state["user_input"]}
 
     Classify this request and return ONLY JSON:
     """
 
         try:
-            """
-            response = await self.model.ainvoke(
-                [
-                    SystemMessage(content=self.system_prompt),
-                    SystemMessage(content=analysis_prompt),
-                ]
-            )
-            """
-            request = [
+            request = state["messages"]
+            request += [
                 SystemMessage(content=self.system_prompt),
                 SystemMessage(content=analysis_prompt),
             ]
@@ -65,97 +80,42 @@ class WorkflowOrchestrator:
             # content = response.content.strip()
 
             # Извлечение JSON из ответа
-            import re
 
             json_match = re.search(r"\{.*\}", response, re.DOTALL)
-            if json_match:
-                content = json_match.group()
-
-            # Парсинг JSON
-            decision_data = json.loads(content)
-
-            # Убедимся, что все обязательные поля присутствуют
-            if "needs_additional_info" not in decision_data:
-                decision_data["needs_additional_info"] = False
-
-            return OrchestratorDecision(**decision_data)
+            if json_match is None:
+                raise Exception()
+            
+            decision_data = OrchestratorDecision.model_validate_json(json_match.group())
 
         except Exception as e:
             logger.error(f"{e}")
-            # Fallback decision on error с ВСЕМИ обязательными полями
-            return OrchestratorDecision(
-                workflow_type="research",
+            decision_data = OrchestratorDecision(
+                workflow_type="synthesis",
+                workflow_input="Make summary of context into markdown",
                 reasoning=f"Analysis error: {str(e)}",
                 confidence=0.5,
-                needs_additional_info=False,
             )
-
-    async def execute_workflow(
-        self, decision: OrchestratorDecision, user_input: str, context: Dict = None
-    ) -> Any:
-        """Execute the selected workflow"""
-
-        if decision.workflow_type == "coding":
-            if "coding" in self.workflows:
-                from core.state import CodeWorkflowState
-
-                state = CodeWorkflowState(user_input=user_input)
-                return await self.workflows["coding"].run(state)
-            else:
-                return "Coding workflow is not registered"
-        if decision.workflow_type == "research":
-            if "research" in self.workflows:
-                state = {"search_query": user_input}
-                return await self.workflows["research"].run(state)
-            else:
-                return "Research workflow is not registered"
-
-    async def _handle_direct_response(self, user_input: str) -> str:
-        """Handle direct requests without specialized workflows"""
-
-        direct_prompt = f"""
-The user asked a question that doesn't require specialized workflow. 
-Provide a direct, informative answer:
-
-QUESTION: {user_input}
-
-Answer clearly and to the point.
-"""
-        """
-        response = await self.model.ainvoke(
-            [
-                SystemMessage(content=self.system_prompt),
-                SystemMessage(content=direct_prompt),
-            ]
-        )
-        """
-
-        request = [
-            SystemMessage(content=self.system_prompt),
-            SystemMessage(content=direct_prompt),
-        ]
-
-        response_chunks = []
-
-        async for chunk in self.model.astream(request):
-            if hasattr(chunk, "content"):
-                print(chunk.content, end="", flush=True)
-                response_chunks.append(chunk.content)
-
-        response = "".join(response_chunks)
-
-        return response
+            # Fallback decision on error с ВСЕМИ обязательными полями
+        return {
+            "messages": [decision_data.model_dump_json(indent=4)],
+            "last_judged_workflow": Overwrite(value=decision_data)
+        } # type: ignore
 
     async def process_request(
-        self, user_input: str, context: Dict = None
+        self, user_input: str
     ) -> Dict[str, Any]:
         """Main method for processing requests"""
 
-        # Analyze request
-        decision = await self.analyze_request(user_input)
+        if "synthesis" in self.workflows:
+            raise Exception("There should be agent for final answer.")
+        
+        state: OrchestratorState = {"user_input": user_input, "last_judged_workflow": OrchestratorDecision(workflow_type="null")} # type: ignore
 
-        # Execute workflow
-        result = await self.execute_workflow(decision, user_input, context)
+        while True:
+            state = await self.analyze_request(state)
+            if state["last_judged_workflow"].workflow_type == "synthesis":
+                break
+            self.workflows[state["last_judged_workflow"].workflow_type].run()
 
         return {
             "decision": decision,
