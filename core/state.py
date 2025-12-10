@@ -55,9 +55,12 @@ class CodeAnalysis(BaseModel):
     assumptions: List[str] = Field(description="Any assumptions made during analysis")
 
 
-class Code(BaseModel):
-    code: str = Field(description="Code written by agent")
+class GeneratedCode(BaseModel):  
+    code: str = Field(description="Complete Python code")
 
+class Code(BaseModel):  
+    code: str = Field(description="Code written by agent")
+    output: Optional[str] = Field(default=None, description="Actual execution output")
 
 class CodeReview(BaseModel):
     approved: bool = Field(description="approved or not approved code")
@@ -72,12 +75,12 @@ class CodeReview(BaseModel):
             return []
         return
 
-
+'''
 class OverallCode(BaseModel):
     analysis: CodeAnalysis
     code: Code
     review: CodeReview
-
+'''
 
 class CodeWorkflowState(BaseModel):
     user_input: str = Field(description="Original user request")
@@ -90,7 +93,7 @@ class CodeWorkflowState(BaseModel):
     analysis: Optional[CodeAnalysis] = Field(default=None)
     generated_code: Optional[Code] = Field(default=None)
     review: Optional[CodeReview] = Field(default=None)
-    final_result: Optional[OverallCode] = Field(default=None)
+    final_result: str = Field(default=None)
 
     # Control flow
     needs_retry: bool = Field(default=False)
