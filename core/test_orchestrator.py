@@ -5,7 +5,7 @@ from langchain.chat_models import init_chat_model
 from langchain_core.messages import SystemMessage
 from loguru import logger
 from pydantic import BaseModel, Field
-from ..agents.prompts import workflow_system_prompt
+
 
 
 class OrchestratorDecision(BaseModel):

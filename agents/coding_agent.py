@@ -36,7 +36,7 @@ class CodingAgent(BaseAgent):
         self.analysis_agent = self.model.with_structured_output(CodeAnalysis)
         self.review_agent = self.model.with_structured_output(CodeReview)
         self.generation_agent = self._create_generation_agent()
-    
+
     @property
     def name(self):
         return "coding"

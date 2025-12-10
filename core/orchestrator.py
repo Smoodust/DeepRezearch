@@ -9,6 +9,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 from langgraph.graph.message import add_messages, BaseMessage
 from langgraph.types import Overwrite
+
 from ..agents.prompts import workflow_system_prompt
 
 
@@ -25,6 +26,7 @@ class OrchestratorState(TypedDict):
 
     last_judged_workflow: OrchestratorDecision
     messages: Annotated[list[BaseMessage], add_messages]
+
 
 class WorkflowOrchestrator:
     def __init__(self, model: str = "qwen3:0.6b"):

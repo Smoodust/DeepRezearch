@@ -5,6 +5,7 @@ from datetime import datetime
 def get_current_date():
     return datetime.now().strftime("%B %d, %Y")
 
+
 ############# WORKFLOW ################
 
 workflow_system_prompt = """You are a routing assistant for a multi-agent system. Your ONLY job is to analyze user requests and classify them into the appropriate workflow category.
