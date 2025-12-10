@@ -12,7 +12,7 @@ from langgraph.graph import END, StateGraph
 from loguru import logger
 
 from core.state import (Code, CodeAnalysis, CodeReview, CodeWorkflowState,
-                        WorkflowStep)
+                        GeneratedCode, WorkflowStep)
 
 from .base_agent import BaseAgent
 from .prompts import (CODE_GENERATION_PROMPT, CODE_GENERATION_TEMPLATE,
@@ -53,7 +53,7 @@ class CodingAgent(BaseAgent):
             model=model,
             tools=self.tools,
             system_prompt=CODE_GENERATION_PROMPT,
-            response_format=ToolStrategy(Code),
+            response_format=ToolStrategy(GeneratedCode),
         )
 
     async def analyze(self, task: str) -> CodeAnalysis:
@@ -90,17 +90,27 @@ class CodingAgent(BaseAgent):
         try:
             agent_input = {"messages": [HumanMessage(content=generation_prompt)]}
             response = await self.generation_agent.ainvoke(agent_input)
-            structured_response = response["structured_response"]
+            print(response)
+            code_str = response["structured_response"].code
 
-            logger.success(f"[{self.name}] ✅ Код сгенерирован успешно")
+            logger.debug(f"[{self.name}] ⚙️ Executing:\n{code_str}")
+            try:
+                output = self.tools[0].func(code_str)
+            except Exception as e:
+                output = f"EXECUTION FAILED: {str(e)}"
+                logger.warning(f"[{self.name}] ⚠️ Execution error captured")
 
-            return structured_response
+            full_code = Code(
+                code=code_str,
+                output=output.strip() if output else "[No output produced]",
+            )
+            logger.success(f"[{self.name}] ✅ Generated and executed code")
+            return full_code
 
         except Exception as e:
-            logger.error(
-                f"[{self.name}] ❌ Ошибка генерации кода: {type(e).__name__}: {e}"
-            )
-            raise RuntimeError(f"Failed to generate code: {str(e)}")
+            logger.error(f"[{self.name}] ❌ Critical generation failure: {str(e)}")
+            logger.debug(f"[{self.name}] Input prompt:\n{generation_prompt}")
+            raise RuntimeError(f"Code generation pipeline failed: {str(e)}")
 
     async def review(self, code: Code, analysis: CodeAnalysis) -> CodeReview:
         review_prompt = CODE_REVIEW_TEMPLATE.format(
@@ -199,9 +209,6 @@ class CodingAgent(BaseAgent):
         state.current_step = WorkflowStep.FINAL
         print("finalyze  step")
         if state.analysis and state.generated_code and state.review:
-            state.final_result = {
-                "analysis": state.analysis,
-                "code": state.generated_code,
-                "review": state.review,
-            }
+            state.final_result = f"code: {state.generated_code.code} \n output: {state.generated_code.output}"
+
         return state

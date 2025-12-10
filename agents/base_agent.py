@@ -3,11 +3,14 @@ from typing import TypedDict
 
 from langgraph.graph import StateGraph
 
+
 class BaseAgentState(TypedDict):
     workflow_input: str
 
+
 class BaseAgentOutput(TypedDict):
     output: str
+
 
 class BaseAgent(ABC):
     def __init__(self):
@@ -32,4 +35,4 @@ class BaseAgent(ABC):
         return self._compiled_graph
 
     async def run(self, state: BaseAgentState) -> BaseAgentOutput:
-        return await self.compiled_graph.ainvoke(state) # type: ignore
+        return await self.compiled_graph.ainvoke(state)  # type: ignore
