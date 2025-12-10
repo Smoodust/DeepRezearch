@@ -312,3 +312,9 @@ Here is markdown text:
 {markdown}
 
 Return ONLY plain text summary."""
+
+
+############# CODER ################
+
+SYNTHESIS_SYSTEM_PROMPT = """"""
+SYNTHESIS_INPUT = """"""

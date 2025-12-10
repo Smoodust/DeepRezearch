@@ -1,7 +1,26 @@
-from base_agent import BaseAgent
+from typing import TypedDict
+from base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
+from langgraph.graph.message import BaseMessage
+from langchain.messages import SystemMessage, HumanMessage
+from loguru import logger
+from langchain.chat_models import init_chat_model
+from langgraph.graph import StateGraph, END
+from prompts import SYNTHESIS_SYSTEM_PROMPT, SYNTHESIS_INPUT
 
+class SynthesisAgentState(BaseAgentState):
+    workflow_input: str
+    messages: list[BaseMessage]
+
+class OverallSynthesisState(TypedDict):
+    workflow_input: str
+    messages: list[BaseMessage]
+
+    output: str
 
 class SynthesisAgent(BaseAgent):
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+        self.model = init_chat_model(model_name, model_provider="ollama")
     @property
     def name(self) -> str:
         return "synthesis"
@@ -9,3 +28,29 @@ class SynthesisAgent(BaseAgent):
     @property
     def purpose(self) -> str:
         return "Makes final answer"
+    
+    async def synthesis(self, state: SynthesisAgentState) -> BaseAgentOutput:
+        messages = state["messages"]
+        messages.append(SystemMessage(SYNTHESIS_SYSTEM_PROMPT))
+        messages.append(HumanMessage(SYNTHESIS_INPUT))
+        response = await self.model.ainvoke(messages)
+        return {"output": response.content} #type: ignore
+    
+    def build_graph(self) -> StateGraph:
+        try:
+            builder = StateGraph(OverallSynthesisState, input_schema=SynthesisAgentState, output_schema=BaseAgentOutput)
+
+            builder.add_node("synthesis", self.synthesis)
+
+            builder.set_entry_point("searching")
+            builder.add_edge("synthesis", END)
+
+            logger.success(f"[{self.name}] ✅ Workflow граф успешно построен")
+            return builder
+
+        except Exception as e:
+            logger.error(f"[{self.name}] ❌ Ошибка при построении графа: {e}")
+            raise
+    
+    async def run(self, state: SynthesisAgentState) -> BaseAgentOutput:
+        return await self.compiled_graph.ainvoke(state) # type: ignore
