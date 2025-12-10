@@ -7,7 +7,6 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 
-
 class OrchestratorDecision(BaseModel):
     """Model for orchestrator routing decision"""
 
