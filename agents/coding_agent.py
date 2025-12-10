@@ -12,7 +12,7 @@ from langgraph.graph import END, StateGraph
 from loguru import logger
 
 from core.state import (Code, CodeAnalysis, CodeReview, CodeWorkflowState,
-                        OverallCode, WorkflowStep)
+                        WorkflowStep)
 
 from .base_agent import BaseAgent
 from .prompts import (CODE_GENERATION_PROMPT, CODE_GENERATION_TEMPLATE,

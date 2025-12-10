@@ -1,5 +1,5 @@
-from enum import Enum
 import operator
+from enum import Enum
 from typing import Annotated, Any, Dict, List, Optional, TypedDict
 
 from pydantic import BaseModel, Field, field_validator
@@ -11,18 +11,21 @@ class RawDocument(TypedDict):
     url: str
     source: str
 
+
 class SearchedDocument(TypedDict):
     url: str
     source: str
     extracted_info: str
 
+
 class SearchedCollection(TypedDict):
     searched_documents: list[SearchedDocument]
 
+
 class SearchWorkflowState(TypedDict):
     search_query: str
-    sources: list[RawDocument]  
-    searched_documents: Annotated[list[SearchedDocument], operator.add] 
+    sources: list[RawDocument]
+    searched_documents: Annotated[list[SearchedDocument], operator.add]
 
 
 ############# CODER ################
