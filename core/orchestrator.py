@@ -5,6 +5,7 @@ from langchain.chat_models import init_chat_model
 from langchain_core.messages import SystemMessage
 from loguru import logger
 from pydantic import BaseModel, Field
+
 from ..agents.prompts import workflow_system_prompt
 
 
@@ -18,6 +19,7 @@ class OrchestratorDecision(BaseModel):
         default=False, description="Whether additional information is needed"
     )
 
+
 class WorkflowOrchestrator:
     def __init__(self, model: str = "qwen3:0.6b"):
         self.model = init_chat_model(model, model_provider="ollama")
@@ -30,7 +32,7 @@ class WorkflowOrchestrator:
     async def analyze_request(self, user_input: str) -> OrchestratorDecision:
         """Analyze the request and make routing decision"""
 
-        system_prompt = workflow_system_prompt.format()
+        workflow_system_prompt.format()
 
         analysis_prompt = f"""
     USER REQUEST: {user_input}

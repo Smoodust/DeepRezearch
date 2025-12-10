@@ -30,7 +30,7 @@ class ResearchAgent(BaseAgent):
         logger.info(
             f"[{self.name}] 🔧 Агент инициализирован с моделью {model_name}, max_result={max_result}"
         )
-    
+
     @property
     def name(self):
         return "research"
