@@ -55,12 +55,14 @@ class CodeAnalysis(BaseModel):
     assumptions: List[str] = Field(description="Any assumptions made during analysis")
 
 
-class GeneratedCode(BaseModel):  
+class GeneratedCode(BaseModel):
     code: str = Field(description="Complete Python code")
 
-class Code(BaseModel):  
+
+class Code(BaseModel):
     code: str = Field(description="Code written by agent")
     output: Optional[str] = Field(default=None, description="Actual execution output")
+
 
 class CodeReview(BaseModel):
     approved: bool = Field(description="approved or not approved code")
@@ -75,12 +77,14 @@ class CodeReview(BaseModel):
             return []
         return
 
-'''
+
+"""
 class OverallCode(BaseModel):
     analysis: CodeAnalysis
     code: Code
     review: CodeReview
-'''
+"""
+
 
 class CodeWorkflowState(BaseModel):
     user_input: str = Field(description="Original user request")

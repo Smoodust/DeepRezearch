@@ -6,7 +6,6 @@ from loguru import logger
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from agents.research_agent import ResearchAgent
 from agents.coding_agent import CodingAgent
 from core.test_orchestrator import TestWorkflowOrchestrator
 
@@ -22,17 +21,17 @@ class TestOrchestrator:
         coding_agent = CodingAgent(model_name="llama3.1:8b")
         self.orchestrator.register_workflow("coding", coding_agent)
 
-        #search_agent = ResearchAgent(model_name="llama3.1:8b", max_result=5)
-        #self.orchestrator.register_workflow("research", search_agent)
+        # search_agent = ResearchAgent(model_name="llama3.1:8b", max_result=5)
+        # self.orchestrator.register_workflow("research", search_agent)
 
     async def run_test_cases(self):
         """Run test scenarios"""
 
         test_cases = [
             # "Hi! How are you?",
-            #"Calculate 2**222 in python REPL. Provide me an output",
+            # "Calculate 2**222 in python REPL. Provide me an output",
             "Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
-            #"Research modern approaches to machine learning",
+            # "Research modern approaches to machine learning",
             # "Explain what polymorphism is in OOP",
             # "Create a class for working with SQLite database",
             # "Analyze the advantages and disadvantages of microservices architecture",
@@ -88,7 +87,7 @@ class TestOrchestrator:
                     for i, chunk in enumerate(result["result"]):
                         logger.success(f"    Chunk {i+1}: {chunk}")
                 else:
-                    print(result['result']['final_result'])
+                    print(result["result"]["final_result"])
 
             except KeyboardInterrupt:
                 break
