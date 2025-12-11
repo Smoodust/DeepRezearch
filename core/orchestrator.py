@@ -1,16 +1,14 @@
-from typing import Annotated, Dict, TypedDict, cast
 import re
+from typing import Annotated, Dict, TypedDict, cast
 
 from langchain.chat_models import init_chat_model
-from langchain_core.messages import SystemMessage, AIMessage
-from agents.base_agent import BaseAgent, BaseAgentState
-from agents.synthesis_agent import SynthesisAgent, SynthesisAgentState
+from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.graph.message import BaseMessage, add_messages
-from langgraph.types import Overwrite
 from loguru import logger
 from pydantic import BaseModel, Field
 
 from agents.base_agent import BaseAgent
+from agents.synthesis_agent import SynthesisAgent, SynthesisAgentState
 
 workflow_system_prompt = """You are a routing assistant for a multi-agent system. Your ONLY job is to analyze user requests and classify them into the appropriate workflow category.
 
@@ -72,9 +70,9 @@ class WorkflowOrchestrator:
         for index, x in enumerate(self.workflows.values()):
             workflows_list.append(f"{index+1}. {x.name} - {x.purpose}")
         workflows_list = "\n".join(workflows_list)
-    
+
         workflow_variants = "|".join([x for x in self.workflows.keys()])
-    
+
         return workflow_system_prompt.format(
             workflows_list=workflows_list, workflow_variants=workflow_variants
         )
@@ -125,29 +123,38 @@ class WorkflowOrchestrator:
             )
         return {
             "user_input": state["user_input"],
-            "messages": state["messages"] + [AIMessage(decision_data.model_dump_json(indent=4))],
+            "messages": state["messages"]
+            + [AIMessage(decision_data.model_dump_json(indent=4))],
             "last_judged_workflow_type": decision_data.workflow_type,
-            "last_judged_workflow_input": decision_data.workflow_input
-        } # type: ignore
+            "last_judged_workflow_input": decision_data.workflow_input,
+        }  # type: ignore
 
     @logger.catch
-    async def process_request(
-        self, user_input: str
-    ) -> str:
+    async def process_request(self, user_input: str) -> str:
         """Main method for processing requests"""
 
         if not "synthesis" in self.workflows:
             raise Exception("There should be agent for final answer.")
-        
-        state: OrchestratorState = {"user_input": user_input, "last_judged_workflow_type": "null", "last_judged_workflow_input": "", "messages": []}
+
+        state: OrchestratorState = {
+            "user_input": user_input,
+            "last_judged_workflow_type": "null",
+            "last_judged_workflow_input": "",
+            "messages": [],
+        }
 
         while True:
             state = await self.analyze_request(state)
             if state["last_judged_workflow_type"] == "synthesis":
                 break
-            workflow_output = await self.workflows[state["last_judged_workflow_type"]].run({"workflow_input": state["last_judged_workflow_input"]})
+            workflow_output = await self.workflows[
+                state["last_judged_workflow_type"]
+            ].run({"workflow_input": state["last_judged_workflow_input"]})
             state["messages"].append(AIMessage(workflow_output["output"]))
-        
+
         synth_agent: SynthesisAgent = cast(SynthesisAgent, self.workflows["synthesis"])
-        synth_state: SynthesisAgentState = {"workflow_input": state["last_judged_workflow_input"], "messages": state["messages"]}
+        synth_state: SynthesisAgentState = {
+            "workflow_input": state["last_judged_workflow_input"],
+            "messages": state["messages"],
+        }
         return (await synth_agent.run(synth_state))["output"]
