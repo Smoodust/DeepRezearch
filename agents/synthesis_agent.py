@@ -1,11 +1,11 @@
 from typing import TypedDict
-from base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
+from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
 from langgraph.graph.message import BaseMessage
 from langchain.messages import SystemMessage, HumanMessage
 from loguru import logger
 from langchain.chat_models import init_chat_model
 from langgraph.graph import StateGraph, END
-from prompts import SYNTHESIS_SYSTEM_PROMPT, SYNTHESIS_INPUT
+from .prompts import SYNTHESIS_SYSTEM_PROMPT, SYNTHESIS_INPUT
 
 class SynthesisAgentState(BaseAgentState):
     workflow_input: str
@@ -32,7 +32,7 @@ class SynthesisAgent(BaseAgent):
     async def synthesis(self, state: SynthesisAgentState) -> BaseAgentOutput:
         messages = state["messages"]
         messages.append(SystemMessage(SYNTHESIS_SYSTEM_PROMPT))
-        messages.append(HumanMessage(SYNTHESIS_INPUT))
+        messages.append(HumanMessage(SYNTHESIS_INPUT.format(workflow_input=state["workflow_input"])))
         response = await self.model.ainvoke(messages)
         return {"output": response.content} #type: ignore
     

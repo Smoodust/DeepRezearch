@@ -7,30 +7,33 @@ from loguru import logger
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from agents.coding_agent import CodingAgent
-from core.test_orchestrator import TestWorkflowOrchestrator
+from agents.research_agent import ResearchAgent
+from agents.synthesis_agent import SynthesisAgent
+from core.orchestrator import WorkflowOrchestrator
 
 
-class TestOrchestrator:
+class Orchestrator:
     def __init__(self):
-        self.orchestrator = TestWorkflowOrchestrator()
+        self.orchestrator = WorkflowOrchestrator(model_name="llama3.1:8b")
 
     async def setup_workflows(self):
         """Initialize all workflows"""
 
         # Initialize coding workflow
         coding_agent = CodingAgent(model_name="llama3.1:8b")
-        self.orchestrator.register_workflow("coding", coding_agent)
-
-        # search_agent = ResearchAgent(model_name="llama3.1:8b", max_result=5)
-        # self.orchestrator.register_workflow("research", search_agent)
+        search_agent = ResearchAgent(model_name="llama3.1:8b", max_result=5)
+        synthesis_agent = SynthesisAgent(model_name="llama3.1:8b")
+        self.orchestrator.register_workflow(coding_agent)
+        self.orchestrator.register_workflow(search_agent)
+        self.orchestrator.register_workflow(synthesis_agent)
 
     async def run_test_cases(self):
         """Run test scenarios"""
 
         test_cases = [
-            # "Hi! How are you?",
+            "Hi! How are you?",
             # "Calculate 2**222 in python REPL. Provide me an output",
-            "Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
+            # "Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
             # "Research modern approaches to machine learning",
             # "Explain what polymorphism is in OOP",
             # "Create a class for working with SQLite database",
@@ -49,64 +52,21 @@ class TestOrchestrator:
                 result = await self.orchestrator.process_request(user_input)
 
                 logger.success(f"ORCHESTRATOR DECISION:")
-                logger.success(f"  Workflow: {result['decision'].workflow_type}")
-                logger.success(f"  Reasoning: {result['decision'].reasoning}")
-                logger.success(f"  Confidence: {result['decision'].confidence:.2f}")
-
-                print(f"{result["result"]['final_result']}")
+                print(f"{result}")
 
             except Exception as e:
                 logger.error(f"ERROR: {str(e)}")
 
-    async def interactive_mode(self):
-        """Interactive mode for testing"""
-        logger.debug("\n🎯 ORCHESTRATOR INTERACTIVE MODE")
-        logger.debug("Type 'quit' to exit")
-
-        while True:
-            try:
-                user_input = input("\n🧠 Your request: ").strip()
-
-                if user_input.lower() in ["quit", "exit"]:
-                    break
-
-                if not user_input:
-                    continue
-
-                logger.debug("🤔 Analyzing request...")
-                result = await self.orchestrator.process_request(user_input)
-
-                logger.success(f"\n📋 RESULT:")
-                logger.success(f"   🔧 Workflow: {result['decision'].workflow_type}")
-                logger.success(f"   💭 Reasoning: {result['decision'].reasoning}")
-                logger.success(f"   ✅ Confidence: {result['decision'].confidence:.2f}")
-                logger.success(f"\n   📝 Response:")
-
-                if isinstance(result["result"], list):
-                    logger.success(f"  Streamed {len(result['result'])} chunks:")
-                    for i, chunk in enumerate(result["result"]):
-                        logger.success(f"    Chunk {i+1}: {chunk}")
-                else:
-                    print(result["result"]["final_result"])
-
-            except KeyboardInterrupt:
-                break
-            except Exception as e:
-                logger.error(f"❌ Error: {str(e)}")
-
 
 async def main():
     """Main testing function"""
-    tester = TestOrchestrator()
+    tester = Orchestrator()
 
     logger.info("🔄 Initializing workflows...")
     await tester.setup_workflows()
 
     logger.info("🚀 Running test scenarios...")
     await tester.run_test_cases()
-
-    logger.info("\n🎮 Starting interactive mode...")
-    await tester.interactive_mode()
 
 
 if __name__ == "__main__":
