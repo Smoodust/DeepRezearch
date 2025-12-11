@@ -124,9 +124,10 @@ class WorkflowOrchestrator:
                 confidence=0.5,
             )
         return {
-            "messages": [decision_data.model_dump_json(indent=4)],
-            "last_judged_workflow_type": Overwrite(value=decision_data.workflow_type),
-            "last_judged_workflow_input": Overwrite(value=decision_data.workflow_input)
+            "user_input": state["user_input"],
+            "messages": state["messages"] + [AIMessage(decision_data.model_dump_json(indent=4))],
+            "last_judged_workflow_type": decision_data.workflow_type,
+            "last_judged_workflow_input": decision_data.workflow_input
         } # type: ignore
 
     @logger.catch
