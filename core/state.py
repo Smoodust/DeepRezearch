@@ -9,6 +9,11 @@ from agents.base_agent import BaseAgentState
 ############# RESEARCHER ################
 
 
+class SearchQueriesStructureOutput(BaseModel):
+    rationale: str
+    query: list[str]
+
+
 class RawDocument(TypedDict):
     url: str
     source: str
@@ -25,6 +30,7 @@ class SearchedCollection(TypedDict):
 
 
 class SearchWorkflowState(BaseAgentState):
+    search_queries: list[str]
     sources: list[RawDocument]
     searched_documents: Annotated[list[SearchedDocument], operator.add]
 
