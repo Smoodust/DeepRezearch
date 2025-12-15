@@ -5,6 +5,8 @@ from typing import Annotated, Any, Dict, List, Optional, TypedDict
 from pydantic import BaseModel, Field, field_validator
 from ..agents.base_agent import BaseAgentState
 
+from agents.base_agent import BaseAgentState
+
 ############# RESEARCHER ################
 
 
@@ -75,35 +77,22 @@ class CodeReview(BaseModel):
     def validate_list_contents(cls, v):
         if v is None:
             return []
-        return
+        return v
 
 
-"""
-class OverallCode(BaseModel):
-    analysis: CodeAnalysis
-    code: Code
-    review: CodeReview
-"""
+class CodeAgentState(BaseAgentState):
+    workflow_input: str
+    current_step: str
 
+    analysis_data: Optional[dict]
+    generated_code_data: Optional[dict]
+    review_data: Optional[dict]
 
-class CodeWorkflowState(BaseModel):
-    user_input: str = Field(description="Original user request")
+    needs_retry: bool
+    retry_count: int
+    max_retries: int
 
-    # Current execution state
-    current_step: WorkflowStep = Field(default=WorkflowStep.INIT)
-    error: Optional[str] = Field(default=None, description="Any error that occurred")
+    errors: Annotated[list[str], operator.add]
+    feedback: Annotated[list[str], operator.add]
 
-    # Workflow data
-    analysis: Optional[CodeAnalysis] = Field(default=None)
-    generated_code: Optional[Code] = Field(default=None)
-    review: Optional[CodeReview] = Field(default=None)
-    final_result: str = Field(default=None)
-
-    # Control flow
-    needs_retry: bool = Field(default=False)
-    retry_count: int = Field(default=3)
-    max_retries: int = Field(default=3)
-
-    # Metadata
-    # execution_time: float = Field(default=0.0)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any]

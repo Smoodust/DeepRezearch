@@ -11,10 +11,10 @@ from langchain_ollama import ChatOllama
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-from core.state import (Code, CodeAnalysis, CodeReview, CodeWorkflowState,
+from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
                         GeneratedCode, WorkflowStep)
 
-from .base_agent import BaseAgent
+from .base_agent import BaseAgent, BaseAgentOutput
 from .prompts import (CODE_GENERATION_PROMPT, CODE_GENERATION_TEMPLATE,
                       CODE_REVIEW_TEMPLATE, TASK_ANALYSIS_TEMPLATE)
 
@@ -134,7 +134,10 @@ class CodingAgent(BaseAgent):
             raise RuntimeError(f"Failed to review code: {str(e)}")
 
     def build_graph(self) -> StateGraph:
-        builder = StateGraph(CodeWorkflowState)
+        builder = StateGraph(
+            CodeAgentState,
+            output_schema=BaseAgentOutput,
+        )
 
         builder.add_node("analyze", self._analyze_task)
         builder.add_node("generate_code", self._generate_code)
@@ -157,58 +160,102 @@ class CodingAgent(BaseAgent):
         logger.success(f"[{self.name}] ✅ Workflow граф построен")
         return builder
 
-    async def _analyze_task(self, state: CodeWorkflowState) -> CodeWorkflowState:
+    async def _analyze_task(self, state: CodeAgentState) -> CodeAgentState:
         try:
-            state.current_step = WorkflowStep.ANALYSIS
-            state.analysis = await self.analyze(state.user_input)
-        except Exception as e:
-            raise e
-        return state
+            result_state = dict(state)
+            result_state["current_step"] = WorkflowStep.ANALYSIS.value
+            analysis = await self.analyze(state["workflow_input"])
 
-    async def _generate_code(self, state: CodeWorkflowState) -> CodeWorkflowState:
+            result_state["analysis_data"] = analysis.model_dump()
+            result_state["errors"] = []
+
+        except Exception as e:
+            logger.error(f"Analysis error: {e}")
+            result_state = dict(state)
+            result_state["current_step"] = WorkflowStep.ANALYSIS.value
+            result_state["errors"] = [f"Analysis failed: {str(e)}"]
+            return result_state
+
+        return result_state
+
+    async def _generate_code(self, state: CodeAgentState) -> CodeAgentState:
         try:
-            state.current_step = WorkflowStep.GENERATION
-            if state.analysis:
-                feedback = state.metadata.get("feedback", [])
-                state.generated_code = await self.generate(state.analysis, feedback)
-            state.error = None
-        except Exception as e:
-            raise e
-        return state
+            result_state = dict(state)
+            result_state["current_step"] = WorkflowStep.GENERATION.value
 
-    async def _review_code(self, state: CodeWorkflowState) -> CodeWorkflowState:
+            if not state.get("analysis_data"):
+                raise ValueError("No analysis data available")
+
+            analysis = CodeAnalysis.model_validate(state["analysis_data"])
+            feedback = state.get("feedback", [])
+            generated_code = await self.generate(analysis, feedback)
+
+            result_state["generated_code_data"] = generated_code.model_dump()
+            result_state["errors"] = []
+
+            return result_state
+        except Exception as e:
+            logger.error(f"Generation error: {e}")
+            result_state = dict(state)
+            result_state["current_step"] = WorkflowStep.GENERATION.value
+            result_state["errors"] = state.get("errors", []) + [
+                f"Generation failed: {str(e)}"
+            ]
+            return result_state
+
+    async def _review_code(self, state: CodeAgentState) -> CodeAgentState:
         try:
-            state.current_step = WorkflowStep.REVIEW
-            print("review step")
-            if state.analysis and state.generated_code:
-                state.review = await self.review(state.generated_code, state.analysis)
+            result_state = dict(state)
+            result_state["current_step"] = WorkflowStep.REVIEW.value
+
+            if not state.get("analysis_data") or not state.get("generated_code_data"):
+                logger.warning("Missing analysis or generated code data")
+                return result_state
+
+            analysis = CodeAnalysis.model_validate(state["analysis_data"])
+            generated_code = Code.model_validate(state["generated_code_data"])
+
+            review = await self.review(generated_code, analysis)
+
+            result_state["review_data"] = review.model_dump()
+            result_state["feedback"] = review.suggestions if not review.approved else []
+
+            return result_state
         except Exception as e:
-            raise e
-        return state
+            logger.error(f"Review error: {e}")
+            return state
 
-    def _reflect(self, state: CodeWorkflowState) -> CodeWorkflowState:
-        state.current_step = WorkflowStep.REFLECTION
-        state.retry_count += 1
+    async def _reflect(self, state: CodeAgentState) -> CodeAgentState:
+        result_state = dict(state)
+        result_state["current_step"] = WorkflowStep.REFLECTION.value
+        result_state["retry_count"] = state.get("retry_count", 0) + 1
+        result_state["needs_retry"] = True
+        return result_state
 
-        print("reflect step")
-        if state.review and not state.review.approved:
-            state.metadata["feedback"] = state.review.suggestions
-            state.needs_retry = True
-        return state
+    def _should_reflect(self, state: CodeAgentState) -> str:
+        review_data = state.get("review_data")
 
-    def _should_reflect(self, state: CodeWorkflowState) -> str:
-        if state.review is None:
+        if not review_data:
             return "finalize"
 
-        if not state.review.approved and state.retry_count < state.max_retries:
-            print("shoud reflect step")
+        review = CodeReview.model_validate(review_data)
+        retry_count = state.get("retry_count", 0)
+        max_retries = state.get("max_retries", 3)
+
+        if not review.approved and retry_count < max_retries:
             return "reflect"
         return "finalize"
 
-    def _finalize(self, state: CodeWorkflowState) -> CodeWorkflowState:
-        state.current_step = WorkflowStep.FINAL
-        print("finalyze  step")
-        if state.analysis and state.generated_code and state.review:
-            state.final_result = f"code: {state.generated_code.code} \n output: {state.generated_code.output}"
+    async def _finalize(self, state: CodeAgentState) -> BaseAgentOutput:
+        result_state = dict(state)
+        result_state["current_step"] = WorkflowStep.FINAL.value
 
-        return state
+        final_result = ""
+        if state.get("generated_code_data"):
+            code_data = state["generated_code_data"]
+            code = Code.model_validate(code_data)
+            final_result = f"Code: {code.code}"
+            if code.output:
+                final_result += f"\nOutput: {code.output}"
+
+        return {"output": final_result}
