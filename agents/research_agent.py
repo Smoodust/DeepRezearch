@@ -33,11 +33,20 @@ class ResearchAgent(BaseAgent):
 
     @property
     def name(self):
-        return "research"
+        return "WEB_RESEARCHER - 'The Knowledge Retrieval System'"
 
     @property
     def purpose(self):
-        return "For information gathering: research, analysis, data collection, comparative studies."
+        purpose = """
+        Gather, analyze, and summarize information from the internet
+        Capabilities:
+        - Web search and information retrieval
+        - Multi-source data synthesis
+        - Fact-checking and source verification
+        - Summarization and contextual analysis
+        Use when: Task requires current information, research, or data not in training set
+        """
+        return purpose
 
     def searching(self, state: SearchWorkflowState) -> SearchWorkflowState:
         query = state["workflow_input"]

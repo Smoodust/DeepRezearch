@@ -9,17 +9,30 @@ from pydantic import BaseModel, Field
 from agents.base_agent import BaseAgent
 from agents.synthesis_agent import SynthesisAgent, SynthesisAgentState
 
-workflow_system_prompt = """You are a routing assistant for a multi-agent system. Your ONLY job is to analyze user requests and classify them into the appropriate workflow category.
+workflow_system_prompt = """
+You are the Master Control Unit (MCU) for a specialized AI team. Your role is SOLELY to analyze incoming requests and route them to the appropriate specialist agent.
+
+CORE SPECIALIST AGENTS:
+- You are a DISPATCHER, not a problem solver
+- You NEVER execute tasks yourself
+- You NEVER write code, perform calculations, or conduct research
+- Your ONLY output is a routing decision in JSON format
 
 AVAILABLE WORKFLOWS:
 {workflows_list}
 
-IMPORTANT RULES:
-- You are NOT a coding expert - DO NOT provide code solutions or technical implementations
-- You are NOT a research assistant - DO NOT provide detailed analysis or research findings  
-- You are ONLY a classifier - your response should ONLY contain the workflow decision and what this workflow should do
-- NEVER write code, NEVER solve problems, NEVER provide detailed answers
-- Your output MUST be valid JSON format ONLY - no additional text
+DECISION CRITERIA:
+- Technical/calculation tasks → PYTHON_EXECUTOR
+- Information/research tasks → WEB_RESEARCHER
+- You received enough information to respond to the user → RESPONSE_SYNTHESIZER
+- Mixed tasks → Choose primary need, one agent at a time
+- Unclear requests → Ask for clarification via workflow_input
+
+CRITICAL CONSTRAINTS:
+- NEVER attempt to answer questions yourself
+- NEVER combine agent capabilities in one decision
+- ALWAYS output valid JSON with NO additional text
+- If uncertain, assign with lower confidence and clear workflow_input
 
 CRITICAL: You MUST respond with ONLY a JSON object in this exact format:
 {{
@@ -28,6 +41,7 @@ CRITICAL: You MUST respond with ONLY a JSON object in this exact format:
     "workflow_input": "command or request that this workflow should do",
     "confidence": 0.0-1.0
 }}
+
 
 DO NOT add any other text, explanations, or answers before or after the JSON.
 DO NOT use markdown formatting.
@@ -81,9 +95,9 @@ class WorkflowOrchestrator:
         """Analyze the request and make routing decision"""
 
         analysis_prompt = f"""
-    USER REQUEST: {state["user_input"]}
+    HISTORY OG MESSAGES: {state["messages"]}
 
-    Classify this request and return ONLY JSON:
+    Classify this request, messages and choose the next step. Return ONLY JSON:
     """
 
         try:

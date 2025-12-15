@@ -39,11 +39,20 @@ class CodingAgent(BaseAgent):
 
     @property
     def name(self):
-        return "coding"
+        return "PYTHON_EXECUTOR - 'The Computational Engine'"
 
     @property
     def purpose(self):
-        return "For ACTUAL programming tasks: writing code, debugging, code review, implementation, optimization, leetcode tasks."
+        purpose = """
+        Write and Execute Python code for calculations, data processing, and algorithmic tasks
+        Capabilities:
+        - Python REPL environment with standard libraries only
+        - Mathematical computations and data transformations
+        - Script execution for well-defined programming tasks
+        - No internet access or external libraries
+        Use when: Task requires computation, data manipulation, or algorithmic processing
+        """
+        return purpose
 
     def _create_generation_agent(self):
         model = ChatOllama(

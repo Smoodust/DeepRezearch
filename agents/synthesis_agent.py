@@ -31,11 +31,24 @@ class SynthesisAgent(BaseAgent):
 
     @property
     def name(self) -> str:
-        return "synthesis"
+        return "RESPONSE_SYNTHESIZER"
 
     @property
     def purpose(self) -> str:
-        return "Makes final answer"
+        purpose = """
+        Synthesizes multi-source information into coherent, well-structured final responses
+        Capabilities:
+        - Integrates information from multiple agent outputs
+        - Formats responses for different audience types
+        - Structures complex information logically
+        - Maintains conversational tone and clarity
+        - Adheres to specified format requirements
+        Use when: 
+        - Preparing final responses from multi-agent workflows 
+        - Combining research findings with computational result 
+        - Handling conversational greetings and informal queries
+        """
+        return purpose
 
     async def synthesis(self, state: SynthesisAgentState) -> BaseAgentOutput:
         messages = state["messages"]
