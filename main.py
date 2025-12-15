@@ -50,7 +50,7 @@ class Orchestrator:
             logger.debug(f"{'='*60}")
 
             try:
-                result = await self.orchestrator.process_request(user_input)
+                await self.orchestrator.process_request(user_input)
 
                 logger.success(f"ORCHESTRATOR DECISION:")
                 print(f"{result}")

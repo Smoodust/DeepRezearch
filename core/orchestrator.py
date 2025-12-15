@@ -1,4 +1,3 @@
-import re
 from typing import Annotated, Dict, TypedDict, cast
 
 from langchain.chat_models import init_chat_model
@@ -96,7 +95,9 @@ class WorkflowOrchestrator:
 
             decision_data = await self.model.ainvoke(request)
 
-            logger.success(f"[orchestrator] made decision: {decision_data.workflow_type} with confidence {decision_data.confidence}")
+            logger.success(
+                f"[orchestrator] made decision: {decision_data.workflow_type} with confidence {decision_data.confidence}"
+            )
             logger.info(decision_data)
             logger.debug(f"Decision details: {decision_data.thinking}")
 
