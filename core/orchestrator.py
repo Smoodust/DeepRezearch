@@ -93,18 +93,20 @@ class WorkflowOrchestrator:
 
     async def analyze_request(self, state: OrchestratorState) -> OrchestratorState:
         """Analyze the request and make routing decision"""
-        
+
         # Создаем сводку о том, что уже было сделано
         history_summary = ""
         if state["messages"]:
             # Извлекаем только выводы агентов (AIMessage)
-            agent_outputs = [msg.content for msg in state["messages"] if isinstance(msg, AIMessage)]
+            agent_outputs = [
+                msg.content for msg in state["messages"] if isinstance(msg, AIMessage)
+            ]
             if agent_outputs:
                 history_summary = f"""
     PREVIOUS AGENT OUTPUTS:
     {chr(10).join([f"• {output[:500]}..." if len(output) > 500 else f"• {output}" for output in agent_outputs])}
     """
-        
+
         analysis_prompt = f"""
     USER ORIGINAL REQUEST: {state["user_input"]}
 
@@ -119,7 +121,7 @@ class WorkflowOrchestrator:
 
     Think step by step and return ONLY JSON:
     """
-        
+
         try:
             # Формируем запрос к модели
             request_messages = [
@@ -129,14 +131,14 @@ class WorkflowOrchestrator:
                 # Добавляем новый промпт для анализа
                 SystemMessage(content=analysis_prompt),
             ]
-            
+
             decision_data = await self.model.ainvoke(request_messages)
-            
+
             logger.success(
                 f"[orchestrator] made decision: {decision_data.workflow_type} with confidence {decision_data.confidence}"
             )
             logger.info(f"Decision thinking: {decision_data.thinking}")
-            
+
         except Exception as e:
             logger.error(f"Analysis error: {repr(e)}")
             decision_data = OrchestratorDecision(
@@ -145,10 +147,10 @@ class WorkflowOrchestrator:
                 workflow_input="Synthesize the information gathered so far",
                 confidence=0.5,
             )
-        
+
         # Сохраняем решение в истории сообщений
         decision_message = AIMessage(decision_data.model_dump_json(indent=4))
-        
+
         return {
             "user_input": state["user_input"],
             "messages": state["messages"] + [decision_message],
@@ -159,70 +161,86 @@ class WorkflowOrchestrator:
     @logger.catch
     async def process_request(self, user_input: str) -> str:
         """Main method for processing requests"""
-        
+
         # Находим ключ для synthesis агента
         synthesis_key = None
         for name, agent in self.workflows.items():
             if isinstance(agent, SynthesisAgent):
                 synthesis_key = name
                 break
-        
+
         if not synthesis_key:
             raise Exception("There should be agent for final answer.")
-        
+
         state: OrchestratorState = {
             "user_input": user_input,
             "last_judged_workflow_type": "",
             "last_judged_workflow_input": "",
             "messages": [],
         }
-        
+
         max_iterations = 5  # Защита от бесконечного цикла
         iteration = 0
-        
+
         while iteration < max_iterations:
             iteration += 1
             logger.info(f"[orchestrator] Iteration {iteration}")
-            
+
             state = await self.analyze_request(state)
             current_workflow_type = state["last_judged_workflow_type"]
-            
+
             # Проверяем, не запрашивает ли orchestrator synthesis
             if current_workflow_type == synthesis_key:
                 logger.info(f"[orchestrator] Decision to use synthesis agent")
                 break
-            
+
             # Проверяем, существует ли запрошенный workflow
             if current_workflow_type not in self.workflows:
-                logger.error(f"[orchestrator] Unknown workflow type: {current_workflow_type}")
+                logger.error(
+                    f"[orchestrator] Unknown workflow type: {current_workflow_type}"
+                )
                 # По умолчанию переходим к synthesis
                 state["last_judged_workflow_type"] = synthesis_key
-                state["last_judged_workflow_input"] = "Process the available information due to unknown workflow request"
+                state["last_judged_workflow_input"] = (
+                    "Process the available information due to unknown workflow request"
+                )
                 break
-            
+
             # Запускаем выбранный агент
-            logger.info(f"[orchestrator] Executing {current_workflow_type} with input: {state['last_judged_workflow_input']}")
-            
+            logger.info(
+                f"[orchestrator] Executing {current_workflow_type} with input: {state['last_judged_workflow_input']}"
+            )
+
             try:
-                workflow_output = await self.workflows[current_workflow_type].run({
-                    "workflow_input": state["last_judged_workflow_input"]
-                })
-                
+                workflow_output = await self.workflows[current_workflow_type].run(
+                    {"workflow_input": state["last_judged_workflow_input"]}
+                )
+
                 # Сохраняем вывод агента в историю
                 agent_output = workflow_output.get("output", "No output from agent")
-                state["messages"].append(AIMessage(f"Agent {current_workflow_type} output:\n{agent_output}"))
-                logger.info(f"[orchestrator] Agent {current_workflow_type} completed successfully")
-                
+                state["messages"].append(
+                    AIMessage(f"Agent {current_workflow_type} output:\n{agent_output}")
+                )
+                logger.info(
+                    f"[orchestrator] Agent {current_workflow_type} completed successfully"
+                )
+
             except Exception as e:
-                logger.error(f"[orchestrator] Error executing {current_workflow_type}: {e}")
-                state["messages"].append(AIMessage(f"Error executing {current_workflow_type}: {str(e)}"))
-        
+                logger.error(
+                    f"[orchestrator] Error executing {current_workflow_type}: {e}"
+                )
+                state["messages"].append(
+                    AIMessage(f"Error executing {current_workflow_type}: {str(e)}")
+                )
+
         # В конце всегда используем synthesis агента для формирования ответа
-        synth_agent: SynthesisAgent = cast(SynthesisAgent, self.workflows[synthesis_key])
+        synth_agent: SynthesisAgent = cast(
+            SynthesisAgent, self.workflows[synthesis_key]
+        )
         synth_state: SynthesisAgentState = {
             "workflow_input": f"Synthesize a response to: {user_input}",
             "messages": state["messages"],
         }
-        
+
         final_result = await synth_agent.run(synth_state)
         return final_result["output"]
