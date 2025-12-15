@@ -20,7 +20,7 @@ class Orchestrator:
         """Initialize all workflows"""
 
         # Initialize coding workflow
-        coding_agent = CodingAgent(model_name="llama3.1:8b")
+        coding_agent = CodingAgent(model_name="qwen2.5-coder:7b")
         search_agent = ResearchAgent(model_name="llama3.1:8b", max_result=5)
         synthesis_agent = SynthesisAgent(model_name="llama3.1:8b")
         self.orchestrator.register_workflow(coding_agent)
@@ -31,10 +31,10 @@ class Orchestrator:
         """Run test scenarios"""
 
         test_cases = [
-            "Hi! How are you?",
-            # "Calculate 2**222 in python REPL. Provide me an output",
-            # "Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
-            # "Research modern approaches to machine learning",
+            #"Hi! How are you?",
+            #"Calculate 2**222 in python REPL. Provide me an output",
+            #"Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
+            "Research modern approaches to machine learning",
             # "Explain what polymorphism is in OOP",
             # "Create a class for working with SQLite database",
             # "Analyze the advantages and disadvantages of microservices architecture",
@@ -52,7 +52,7 @@ class Orchestrator:
                 result = await self.orchestrator.process_request(user_input)
 
                 logger.success(f"ORCHESTRATOR DECISION:")
-                print(f"{result}")
+                #print(f"{result}")
 
             except Exception as e:
                 logger.error(f"ERROR: {str(e)}")

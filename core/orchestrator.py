@@ -57,7 +57,8 @@ class OrchestratorState(TypedDict):
 
 class WorkflowOrchestrator:
     def __init__(self, model_name: str = "qwen3:0.6b"):
-        self.model = init_chat_model(model_name, model_provider="ollama")
+        self.base_model = init_chat_model(model_name, model_provider="ollama")
+        self.model = self.base_model.with_structured_output(OrchestratorDecision)
         self.workflows: Dict[str, BaseAgent] = {}
 
     def register_workflow(self, workflow: BaseAgent):
@@ -93,32 +94,18 @@ class WorkflowOrchestrator:
                 SystemMessage(content=analysis_prompt),
             ]
 
-            response_chunks = []
+            decision_data = await self.model.ainvoke(request)
 
-            async for chunk in self.model.astream(request):
-                if hasattr(chunk, "content"):
-                    print(chunk.content, end="", flush=True)
-                    response_chunks.append(chunk.content)
-
-            response = "".join(response_chunks)
-
-            # Очистка и парсинг ответа
-            # content = response.content.strip()
-
-            # Извлечение JSON из ответа
-
-            json_match = re.search(r"\{.*\}", response, re.DOTALL)
-            if json_match is None:
-                raise Exception()
-
-            decision_data = OrchestratorDecision.model_validate_json(json_match.group())
+            logger.success(f"[orchestrator] made decision: {decision_data.workflow_type} with confidence {decision_data.confidence}")
+            logger.info(decision_data)
+            logger.debug(f"Decision details: {decision_data.thinking}")
 
         except Exception as e:
             logger.error(repr(e))
             decision_data = OrchestratorDecision(
+                thinking=f"Analysis error: {str(e)}",
                 workflow_type="synthesis",
                 workflow_input="Make summary of previous text into markdown",
-                reasoning=f"Analysis error: {str(e)}",
                 confidence=0.5,
             )
         return {
