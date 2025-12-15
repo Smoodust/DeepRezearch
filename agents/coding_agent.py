@@ -99,7 +99,6 @@ class CodingAgent(BaseAgent):
         try:
             agent_input = {"messages": [HumanMessage(content=generation_prompt)]}
             response = await self.generation_agent.ainvoke(agent_input)
-            print(response)
             code_str = response["structured_response"].code
 
             logger.debug(f"[{self.name}] ⚙️ Executing:\n{code_str}")

@@ -135,7 +135,13 @@ class WorkflowOrchestrator:
     async def process_request(self, user_input: str) -> str:
         """Main method for processing requests"""
 
-        if not "synthesis" in self.workflows:
+        synthesis_key = None
+        for name, agent in self.workflows.items():
+            if isinstance(agent, SynthesisAgent):
+                synthesis_key = name
+                break
+
+        if not synthesis_key:
             raise Exception("There should be agent for final answer.")
 
         state: OrchestratorState = {

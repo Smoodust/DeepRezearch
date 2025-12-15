@@ -34,7 +34,7 @@ class ResearchAgent(BaseAgent):
         self._compiled_graph = None
 
         logger.info(
-            f"[{self.name}] 🔧 Агент инициализирован с моделью {model_name}, max_result={max_result}"
+            f"[{self.name}] 🔧 Agent initialize with {model_name}, max_result={max_result}"
         )
 
     @property
@@ -60,9 +60,9 @@ class ResearchAgent(BaseAgent):
             current_date=get_current_date(),
             research_topic=state["workflow_input"],
         )
-        response: SearchQueriesStructureOutput = await self.model.ainvoke(context)  # type: ignore
+        response: SearchQueriesStructureOutput = await self.model_search_queries.ainvoke(context)  # type: ignore
         logger.info(
-            f"[{self.name}] 🔍 Были выбраны следующие запросы для поиска: {response.query[:self.n_queries]}"
+            f"[{self.name}] 🔍 The following search queries were selected: {response.query[:self.n_queries]}"
         )
         return {"search_queries": response.query[: self.n_queries]}
 
@@ -73,16 +73,16 @@ class ResearchAgent(BaseAgent):
 
         for query in state["search_queries"]:
             logger.info(
-                f"[{self.name}] 🔍 Начинаю поиск по запросу: '{query}' (макс. результатов: {self.max_result})"
+                f"[{self.name}] 🔍 Start searching: '{query}' (max results: {self.max_result})"
             )
 
             try:
                 search_results = DDGS().text(query, max_results=self.max_result)  # type: ignore
                 logger.info(
-                    f"[{self.name}] 📊 Получено {len(search_results)} результатов от поисковика"
+                    f"[{self.name}] 📊 Received  {len(search_results)} results from the search engine"
                 )
             except Exception as e:
-                logger.error(f"[{self.name}] ❌ Ошибка при поиске: {e}")
+                logger.error(f"[{self.name}] ❌ Error while searching: {e}")
                 time.sleep(1)
                 continue
 
@@ -93,7 +93,7 @@ class ResearchAgent(BaseAgent):
 
                 if url is None:
                     logger.warning(
-                        f"[{self.name}] ⚠️ Результат #{idx}: URL отсутствует, пропускаю"
+                        f"[{self.name}] ⚠️ Resultт #{idx}: URL is missing, skip"
                     )
                     continue
 
@@ -111,34 +111,34 @@ class ResearchAgent(BaseAgent):
                         results.append(document)
                         processed_count += 1
                         logger.success(
-                            f"[{self.name}] ✅ Успешно загружено: {url} ({len(r.text)} символов)"
+                            f"[{self.name}] ✅ Successfully loaded: {url} ({len(r.text)} characters)"
                         )
                     else:
                         logger.warning(
-                            f"[{self.name}] ⚠️ HTTP {r.status_code} для {url}"
+                            f"[{self.name}] ⚠️ HTTP {r.status_code} for {url}"
                         )
                         failed_count += 1
 
                 except requests.exceptions.Timeout:
-                    logger.error(f"[{self.name}] ⏰ Таймаут при загрузке {url}")
+                    logger.error(f"[{self.name}] ⏰ Tieout while loading {url}")
                     failed_count += 1
                 except requests.exceptions.RequestException as e:
-                    logger.error(f"[{self.name}] ❌ Ошибка сети для {url}: {e}")
+                    logger.error(f"[{self.name}] ❌ Network exception for {url}: {e}")
                     failed_count += 1
                 except Exception as e:
-                    logger.error(f"[{self.name}] ❌ Неожиданная ошибка для {url}: {e}")
+                    logger.error(f"[{self.name}] ❌ exception for {url}: {e}")
                     failed_count += 1
             time.sleep(1)
 
         state["sources"] = results
         logger.info(
-            f"[{self.name}] 📋 Итог поиска: {processed_count} успешно, {failed_count} с ошибками, всего {len(results)} источников"
+            f"[{self.name}] 📋 Search results: {processed_count} successful, {failed_count} with errors, total {len(results)} sources"
         )
         return state
 
     async def extract_text_from_search(self, state: RawDocument):
         url = state["url"]
-        logger.info(f"[{self.name}] 🧠 Начинаю извлечение информации из: {url}")
+        logger.info(f"[{self.name}] 🧠 Starting to extract information from: {url}")
 
         try:
             markdown = convert(state["source"], options)
@@ -153,10 +153,10 @@ class ResearchAgent(BaseAgent):
 
             extracted_length = len(cast(str, response.content))
             logger.info(
-                f"[{self.name}] ✅ Извлечено {extracted_length} символов за {processing_time:.2f} сек"
+                f"[{self.name}] ✅ Extracted {extracted_length} characters in {processing_time:.2f} seconds"
             )
             logger.debug(
-                f"[{self.name}] 📝 Результат извлечения (первые 500 символов): {response.content[:500]}..."
+                f"[{self.name}] 📝 Extracted result (first 500 characters): {response.content[:500]}..."
             )
 
             document: SearchedDocument = {
@@ -167,11 +167,11 @@ class ResearchAgent(BaseAgent):
             return {"searched_documents": [document]}
 
         except Exception as e:
-            logger.error(f"[{self.name}] ❌ Ошибка при извлечении из {url}: {e}")
+            logger.error(f"[{self.name}] ❌ Error fetching from {url}: {e}")
             document: SearchedDocument = {
                 "url": url,
                 "source": state["source"],
-                "extracted_info": f"Ошибка при извлечении: {str(e)}",
+                "extracted_info": f"Error fetching from {url}: {e}",
             }
             return {"searched_documents": [document]}
 
@@ -179,10 +179,10 @@ class ResearchAgent(BaseAgent):
         len(state["sources"])
 
         sends = [Send("extract_info", d) for d in state["sources"]]
-        logger.debug(f"[{self.name}] 📤 Создано {len(sends)} задач для обработки")
+        logger.debug(f"[{self.name}] 📤 Created {len(sends)} tasks to process")
 
         for i, d in enumerate(state["sources"][:3]):
-            logger.debug(f"[{self.name}] 📎 Источник #{i+1}: {d['url'][:100]}...")
+            logger.debug(f"[{self.name}] 📎 Source #{i+1}: {d['url'][:100]}...")
 
         return sends
 
@@ -217,10 +217,10 @@ class ResearchAgent(BaseAgent):
             builder.add_edge("extract_info", "transform_to_output")
             builder.add_edge("transform_to_output", END)
 
-            logger.success(f"[{self.name}] ✅ Workflow граф успешно построен")
+            logger.success(f"[{self.name}] ✅ The workflow graph has been successfully built")
 
             return builder
 
         except Exception as e:
-            logger.error(f"[{self.name}] ❌ Ошибка при построении графа: {e}")
+            logger.error(f"[{self.name}] ❌ Error while constructing graph: {e}")
             raise
