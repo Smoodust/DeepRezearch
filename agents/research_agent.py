@@ -217,7 +217,9 @@ class ResearchAgent(BaseAgent):
             builder.add_edge("extract_info", "transform_to_output")
             builder.add_edge("transform_to_output", END)
 
-            logger.success(f"[{self.name}] ✅ The workflow graph has been successfully built")
+            logger.success(
+                f"[{self.name}] ✅ The workflow graph has been successfully built"
+            )
 
             return builder
 

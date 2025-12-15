@@ -21,7 +21,9 @@ class Orchestrator:
 
         # Initialize coding workflow
         coding_agent = CodingAgent(model_name="llama3.1:8b")
-        search_agent = ResearchAgent(model_name="llama3.1:8b", max_result=5, n_queries=2)
+        search_agent = ResearchAgent(
+            model_name="llama3.1:8b", max_result=5, n_queries=2
+        )
         synthesis_agent = SynthesisAgent(model_name="llama3.1:8b")
         self.orchestrator.register_workflow(coding_agent)
         self.orchestrator.register_workflow(search_agent)
