@@ -6,8 +6,6 @@ from pydantic import BaseModel, Field, field_validator
 
 from agents.base_agent import BaseAgentState
 
-from ..agents.base_agent import BaseAgentState
-
 ############# RESEARCHER ################
 
 
