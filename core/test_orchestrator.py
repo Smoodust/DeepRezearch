@@ -19,7 +19,7 @@ class OrchestratorDecision(BaseModel):
 
 
 class TestWorkflowOrchestrator:
-    def __init__(self, model: str = "qwen3:0.6b"):
+    def __init__(self, model: str = "llama3.1:8b"):
         self.model = init_chat_model(model, model_provider="ollama")
         self.workflows: Dict[str, Any] = {}
         self._setup_prompts()

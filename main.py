@@ -20,7 +20,7 @@ class Orchestrator:
         """Initialize all workflows"""
 
         # Initialize coding workflow
-        coding_agent = CodingAgent(model_name="qwen2.5-coder:7b")
+        coding_agent = CodingAgent(model_name="llama3.1:8b")
         search_agent = ResearchAgent(model_name="llama3.1:8b", max_result=5)
         synthesis_agent = SynthesisAgent(model_name="llama3.1:8b")
         self.orchestrator.register_workflow(coding_agent)
@@ -33,7 +33,7 @@ class Orchestrator:
         test_cases = [
             #"Hi! How are you? Use synthesis workflow to asnwer this question",
             #"Synth this 2 sentences: 1.I like birds! 2. I loke dogs!",
-            #"Calculate 2**222 in python REPL. Provide me an output",
+            "Calculate 2**222 in python REPL. Provide me an output",
             #"Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
             #"Research modern approaches to machine learning",
             # "Explain what polymorphism is in OOP",
@@ -50,7 +50,7 @@ class Orchestrator:
             logger.debug(f"{'='*60}")
 
             try:
-                await self.orchestrator.process_request(user_input)
+                result = await self.orchestrator.process_request(user_input)
 
                 logger.success(f"ORCHESTRATOR DECISION:")
                 print(f"{result}")
