@@ -12,7 +12,7 @@ from loguru import logger
 
 from core.state import RawDocument, SearchedDocument, SearchWorkflowState
 
-from .base_agent import BaseAgent
+from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
 from .prompts import SITE_INFO_EXTRACTION_TEMPALTE
 
 options = ConversionOptions()
@@ -40,7 +40,7 @@ class ResearchAgent(BaseAgent):
         return "For information gathering: research, analysis, data collection, comparative studies."
 
     def searching(self, state: SearchWorkflowState) -> SearchWorkflowState:
-        query = state["search_query"]
+        query = state["workflow_input"]
         logger.info(
             f"[{self.name}] 🔍 Начинаю поиск по запросу: '{query}' (макс. результатов: {self.max_result})"
         )
@@ -155,13 +155,21 @@ class ResearchAgent(BaseAgent):
             logger.debug(f"[{self.name}] 📎 Источник #{i+1}: {d['url'][:100]}...")
 
         return sends
+    
+    def transform_to_output(self, state: SearchWorkflowState) -> BaseAgentOutput:
+        return {"output": "\n\n".join([x["extracted_info"] for x in state["searched_documents"]])}
 
     def build_graph(self) -> StateGraph:
         try:
-            builder = StateGraph(SearchWorkflowState)
+            builder = StateGraph(
+                SearchWorkflowState,
+                input_schema=BaseAgentState,
+                output_schema=BaseAgentOutput,
+            )
 
             builder.add_node("searching", self.searching)
             builder.add_node("extract_info", self.extract_text_from_search)
+            builder.add_node("transform_to_output", self.transform_to_output)
 
             builder.set_entry_point("searching")
 
@@ -169,7 +177,8 @@ class ResearchAgent(BaseAgent):
                 "searching", self.search_map, ["extract_info"]
             )
 
-            builder.add_edge("extract_info", END)
+            builder.add_edge("extract_info", "transform_to_output")
+            builder.add_edge("transform_to_output", END)
 
             logger.success(f"[{self.name}] ✅ Workflow граф успешно построен")
 
