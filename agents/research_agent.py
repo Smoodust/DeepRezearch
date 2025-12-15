@@ -10,10 +10,10 @@ from langgraph.graph import END, StateGraph
 from langgraph.types import Send
 from loguru import logger
 
-from core.state import RawDocument, SearchedDocument, SearchWorkflowState
+from core.state import RawDocument, SearchedDocument, SearchWorkflowState, SearchQueriesStructureOutput
 
 from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
-from .prompts import SITE_INFO_EXTRACTION_TEMPALTE
+from .prompts import query_writer_instructions, SITE_INFO_EXTRACTION_TEMPALTE, get_current_date
 
 options = ConversionOptions()
 options.extract_metadata = False
@@ -21,9 +21,11 @@ options.autolinks = False
 
 
 class ResearchAgent(BaseAgent):
-    def __init__(self, model_name: str, max_result: int):
+    def __init__(self, model_name: str, max_result: int, n_queries: int):
         self.model_name = model_name
         self.model = init_chat_model(model_name, model_provider="ollama")
+        self.model_search_queries = self.model.with_structured_output(SearchQueriesStructureOutput)
+        self.n_queries = n_queries
         self.max_result = max_result
         self._compiled_graph = None
 
@@ -38,67 +40,74 @@ class ResearchAgent(BaseAgent):
     @property
     def purpose(self):
         return "For information gathering: research, analysis, data collection, comparative studies."
+    
+    async def create_search_queries(self, state: SearchWorkflowState):
+        context = query_writer_instructions.format(number_queries=self.n_queries, current_date=get_current_date(), research_topic=state["workflow_input"])
+        response: SearchQueriesStructureOutput = await self.model.ainvoke(context) #type: ignore
+        logger.info(f"[{self.name}] 🔍 Были выбраны следующие запросы для поиска: {response.query[:self.n_queries]}")
+        return {"search_queries": response.query[:self.n_queries]}
 
     def searching(self, state: SearchWorkflowState) -> SearchWorkflowState:
-        query = state["workflow_input"]
-        logger.info(
-            f"[{self.name}] 🔍 Начинаю поиск по запросу: '{query}' (макс. результатов: {self.max_result})"
-        )
-
-        try:
-            search_results = DDGS().text(query, max_results=self.max_result)  # type: ignore
-            logger.info(
-                f"[{self.name}] 📊 Получено {len(search_results)} результатов от поисковика"
-            )
-        except Exception as e:
-            logger.error(f"[{self.name}] ❌ Ошибка при поиске: {e}")
-            state["sources"] = []
-            return state
-
         results = []
         processed_count = 0
         failed_count = 0
-
-        for idx, x in enumerate(search_results, 1):
-            time.sleep(0.5)
-            url: Optional[str] = x.get("href", None)
-            title: Optional[str] = x.get("title", "Без заголовка")
-
-            if url is None:
-                logger.warning(
-                    f"[{self.name}] ⚠️ Результат #{idx}: URL отсутствует, пропускаю"
-                )
-                continue
+        
+        for query in state["search_queries"]:
+            logger.info(
+                f"[{self.name}] 🔍 Начинаю поиск по запросу: '{query}' (макс. результатов: {self.max_result})"
+            )
 
             try:
-                r = requests.get(
-                    url,
-                    headers={
-                        "User-Agent": "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
-                    },
-                    timeout=10,
+                search_results = DDGS().text(query, max_results=self.max_result)  # type: ignore
+                logger.info(
+                    f"[{self.name}] 📊 Получено {len(search_results)} результатов от поисковика"
                 )
-
-                if r.status_code == 200:
-                    document: RawDocument = {"url": url, "source": r.text}
-                    results.append(document)
-                    processed_count += 1
-                    logger.success(
-                        f"[{self.name}] ✅ Успешно загружено: {url} ({len(r.text)} символов)"
-                    )
-                else:
-                    logger.warning(f"[{self.name}] ⚠️ HTTP {r.status_code} для {url}")
-                    failed_count += 1
-
-            except requests.exceptions.Timeout:
-                logger.error(f"[{self.name}] ⏰ Таймаут при загрузке {url}")
-                failed_count += 1
-            except requests.exceptions.RequestException as e:
-                logger.error(f"[{self.name}] ❌ Ошибка сети для {url}: {e}")
-                failed_count += 1
             except Exception as e:
-                logger.error(f"[{self.name}] ❌ Неожиданная ошибка для {url}: {e}")
-                failed_count += 1
+                logger.error(f"[{self.name}] ❌ Ошибка при поиске: {e}")
+                time.sleep(1)
+                continue
+
+            for idx, x in enumerate(search_results, 1):
+                time.sleep(0.5)
+                url: Optional[str] = x.get("href", None)
+                title: Optional[str] = x.get("title", "Без заголовка")
+
+                if url is None:
+                    logger.warning(
+                        f"[{self.name}] ⚠️ Результат #{idx}: URL отсутствует, пропускаю"
+                    )
+                    continue
+
+                try:
+                    r = requests.get(
+                        url,
+                        headers={
+                            "User-Agent": "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
+                        },
+                        timeout=10,
+                    )
+
+                    if r.status_code == 200:
+                        document: RawDocument = {"url": url, "source": r.text}
+                        results.append(document)
+                        processed_count += 1
+                        logger.success(
+                            f"[{self.name}] ✅ Успешно загружено: {url} ({len(r.text)} символов)"
+                        )
+                    else:
+                        logger.warning(f"[{self.name}] ⚠️ HTTP {r.status_code} для {url}")
+                        failed_count += 1
+
+                except requests.exceptions.Timeout:
+                    logger.error(f"[{self.name}] ⏰ Таймаут при загрузке {url}")
+                    failed_count += 1
+                except requests.exceptions.RequestException as e:
+                    logger.error(f"[{self.name}] ❌ Ошибка сети для {url}: {e}")
+                    failed_count += 1
+                except Exception as e:
+                    logger.error(f"[{self.name}] ❌ Неожиданная ошибка для {url}: {e}")
+                    failed_count += 1
+            time.sleep(1)
 
         state["sources"] = results
         logger.info(
@@ -170,12 +179,15 @@ class ResearchAgent(BaseAgent):
                 input_schema=BaseAgentState,
                 output_schema=BaseAgentOutput,
             )
-
+            
+            builder.add_node("create_search_queries", self.create_search_queries)
             builder.add_node("searching", self.searching)
             builder.add_node("extract_info", self.extract_text_from_search)
             builder.add_node("transform_to_output", self.transform_to_output)
 
-            builder.set_entry_point("searching")
+            builder.set_entry_point("create_search_queries")
+
+            builder.add_edge("create_search_queries", "searching")
 
             builder.add_conditional_edges(
                 "searching", self.search_map, ["extract_info"]
