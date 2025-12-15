@@ -31,12 +31,12 @@ class Orchestrator:
         """Run test scenarios"""
 
         test_cases = [
-            "Find the number of Nobel laureates in 2024 and 2025. What is the difference in percentage?"
-            # "Hi! How are you? Use synthesis workflow to asnwer this question",
-            # "Synth this 2 sentences: 1.I like birds! 2. I loke dogs!",
-            # "Calculate 2**222 in python REPL. Provide me an output",
-            # "Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
-            # "Research modern approaches to machine learning",
+            #"Find the number of Nobel laureates in 2024 and 2025. What is the difference in percentage?"
+            #"Hi! How are you? Use synthesis workflow to asnwer this question",
+            #"Synth this 2 sentences: 1.I like birds! 2. I loke dogs!",
+            #"Calculate 2**222 in python REPL. Provide me an output",
+            "Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
+            #"Research modern approaches to machine learning",
             # "Explain what polymorphism is in OOP",
             # "Create a class for working with SQLite database",
             # "Analyze the advantages and disadvantages of microservices architecture",
