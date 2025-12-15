@@ -24,6 +24,8 @@ class OverallSynthesisState(TypedDict):
 
 class SynthesisAgent(BaseAgent):
     def __init__(self, model_name: str):
+        super().__init__()
+
         self.model_name = model_name
         self.model = init_chat_model(model_name, model_provider="ollama")
 
@@ -42,6 +44,9 @@ class SynthesisAgent(BaseAgent):
             HumanMessage(SYNTHESIS_INPUT.format(workflow_input=state["workflow_input"]))
         )
         response = await self.model.ainvoke(messages)
+
+        logger.info(f"[synthesis]: {response.content}")
+
         return {"output": response.content}  # type: ignore
 
     def build_graph(self) -> StateGraph:
@@ -54,7 +59,7 @@ class SynthesisAgent(BaseAgent):
 
             builder.add_node("synthesis", self.synthesis)
 
-            builder.set_entry_point("searching")
+            builder.set_entry_point("synthesis")
             builder.add_edge("synthesis", END)
 
             logger.success(f"[{self.name}] ✅ Workflow граф успешно построен")
