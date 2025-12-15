@@ -83,10 +83,10 @@ class CodeReview(BaseModel):
 class CodeAgentState(BaseAgentState):
     workflow_input: str
     current_step: str
-    
-    analysis_data: Optional[dict]   
-    generated_code_data: Optional[dict] 
-    review_data: Optional[dict]       
+
+    analysis_data: Optional[dict]
+    generated_code_data: Optional[dict]
+    review_data: Optional[dict]
 
     needs_retry: bool
     retry_count: int

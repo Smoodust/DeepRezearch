@@ -11,22 +11,12 @@ from langchain_ollama import ChatOllama
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-from core.state import (
-    Code,
-    CodeAnalysis,
-    CodeReview,
-    CodeAgentState,
-    GeneratedCode,
-    WorkflowStep,
-)
+from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
+                        GeneratedCode, WorkflowStep)
 
 from .base_agent import BaseAgent, BaseAgentOutput
-from .prompts import (
-    CODE_GENERATION_PROMPT,
-    CODE_GENERATION_TEMPLATE,
-    CODE_REVIEW_TEMPLATE,
-    TASK_ANALYSIS_TEMPLATE,
-)
+from .prompts import (CODE_GENERATION_PROMPT, CODE_GENERATION_TEMPLATE,
+                      CODE_REVIEW_TEMPLATE, TASK_ANALYSIS_TEMPLATE)
 
 
 class CodingAgent(BaseAgent):
@@ -144,7 +134,10 @@ class CodingAgent(BaseAgent):
             raise RuntimeError(f"Failed to review code: {str(e)}")
 
     def build_graph(self) -> StateGraph:
-        builder = StateGraph(CodeAgentState, output_schema=BaseAgentOutput,)
+        builder = StateGraph(
+            CodeAgentState,
+            output_schema=BaseAgentOutput,
+        )
 
         builder.add_node("analyze", self._analyze_task)
         builder.add_node("generate_code", self._generate_code)
