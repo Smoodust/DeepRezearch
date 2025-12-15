@@ -3,9 +3,10 @@ from enum import Enum
 from typing import Annotated, Any, Dict, List, Optional, TypedDict
 
 from pydantic import BaseModel, Field, field_validator
-from ..agents.base_agent import BaseAgentState
 
 from agents.base_agent import BaseAgentState
+
+from ..agents.base_agent import BaseAgentState
 
 ############# RESEARCHER ################
 

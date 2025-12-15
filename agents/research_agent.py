@@ -155,9 +155,13 @@ class ResearchAgent(BaseAgent):
             logger.debug(f"[{self.name}] 📎 Источник #{i+1}: {d['url'][:100]}...")
 
         return sends
-    
+
     def transform_to_output(self, state: SearchWorkflowState) -> BaseAgentOutput:
-        return {"output": "\n\n".join([x["extracted_info"] for x in state["searched_documents"]])}
+        return {
+            "output": "\n\n".join(
+                [x["extracted_info"] for x in state["searched_documents"]]
+            )
+        }
 
     def build_graph(self) -> StateGraph:
         try:
