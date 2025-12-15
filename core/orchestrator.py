@@ -95,7 +95,8 @@ class WorkflowOrchestrator:
         """Analyze the request and make routing decision"""
 
         analysis_prompt = f"""
-    HISTORY OG MESSAGES: {state["messages"]}
+    USER REQUEST: {state["user_input"]}
+    HISTORY OF MESSAGES: {state["messages"]}
 
     Classify this request, messages and choose the next step. Return ONLY JSON:
     """
