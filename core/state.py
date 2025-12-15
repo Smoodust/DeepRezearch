@@ -15,6 +15,7 @@ class SearchQueriesStructureOutput(BaseModel):
     rationale: str
     query: list[str]
 
+
 class RawDocument(TypedDict):
     url: str
     source: str
