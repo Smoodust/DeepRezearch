@@ -1,20 +1,28 @@
+import asyncio
 import re
 import time
 from typing import Optional, cast
 
-import requests
+import aiohttp
 from ddgs import DDGS
 from html_to_markdown import ConversionOptions, convert
 from langchain.chat_models import init_chat_model
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-from core.state import (RawDocument, SearchedDocument,
-                        SearchQueriesStructureOutput, SearchWorkflowState)
+from core.state import (
+    RawDocument,
+    SearchedDocument,
+    SearchQueriesStructureOutput,
+    SearchWorkflowState,
+)
 
 from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
-from .prompts import (SITE_INFO_EXTRACTION_TEMPALTE, get_current_date,
-                      query_writer_instructions)
+from .prompts import (
+    SITE_INFO_EXTRACTION_TEMPALTE,
+    get_current_date,
+    query_writer_instructions,
+)
 
 options = ConversionOptions()
 options.extract_metadata = False
@@ -30,6 +38,9 @@ class ResearchAgent(BaseAgent):
         )
         self.n_queries = n_queries
         self.max_result = max_result
+        self.user_agent = {
+            "User-Agent": "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
+        }
         self._compiled_graph = None
 
         logger.info(
@@ -65,69 +76,73 @@ class ResearchAgent(BaseAgent):
         )
         return {"search_queries": response.query[: self.n_queries]}
 
-    def searching(self, state: SearchWorkflowState) -> SearchWorkflowState:
+    async def searching(self, state: SearchWorkflowState) -> SearchWorkflowState:
         results = []
+
+        connector = aiohttp.TCPConnector(limit_per_host=5, force_close=True)
+        timeout = aiohttp.ClientTimeout(total=30, connect=10)
+
         processed_count = 0
         failed_count = 0
 
-        for query in state["search_queries"]:
-            logger.info(
-                f"[{self.name}] 🔍 Start searching: '{query}' (max results: {self.max_result})"
-            )
-
-            try:
-                search_results = DDGS().text(query, max_results=self.max_result)  # type: ignore
+        async with aiohttp.ClientSession(
+            connector=connector, timeout=timeout, headers=self.user_agent
+        ) as session:
+            for query in state["search_queries"]:
                 logger.info(
-                    f"[{self.name}] 📊 Received  {len(search_results)} results from the search engine"
+                    f"[{self.name}] 🔍 Start searching: '{query}' (max results: {self.max_result})"
                 )
-            except Exception as e:
-                logger.error(f"[{self.name}] ❌ Error while searching: {e}")
-                time.sleep(1)
-                continue
-
-            for idx, x in enumerate(search_results, 1):
-                time.sleep(0.5)
-                url: Optional[str] = x.get("href", None)
-                title: Optional[str] = x.get("title", "Без заголовка")
-
-                if url is None:
-                    logger.warning(
-                        f"[{self.name}] ⚠️ Resultт #{idx}: URL is missing, skip"
-                    )
-                    continue
 
                 try:
-                    r = requests.get(
-                        url,
-                        headers={
-                            "User-Agent": "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
-                        },
-                        timeout=10,
-                    )
+                    search_results = DDGS().text(query, max_results=self.max_result)  # type: ignore
 
-                    if r.status_code == 200:
-                        document: RawDocument = {"url": url, "source": r.text}
-                        results.append(document)
-                        processed_count += 1
-                        logger.success(
-                            f"[{self.name}] ✅ Successfully loaded: {url} ({len(r.text)} characters)"
-                        )
-                    else:
+                    logger.info(
+                        f"[{self.name}] 📊 Received  {len(search_results)} results from the search engine"
+                    )
+                except Exception as e:
+                    logger.error(f"[{self.name}] ❌ Error while searching: {e}")
+                    await asyncio.sleep(1)
+                    continue
+
+                for idx, x in enumerate(search_results, 1):
+                    await asyncio.sleep(0.5)
+                    url: Optional[str] = x.get("href", None)
+                    title: Optional[str] = x.get("title", "Без заголовка")
+
+                    if url is None:
                         logger.warning(
-                            f"[{self.name}] ⚠️ HTTP {r.status_code} for {url}"
+                            f"[{self.name}] ⚠️ Resultт #{idx}: URL is missing, skip"
+                        )
+                        continue
+
+                    try:
+                        r = await session.get(url)
+
+                        if r.status == 200:
+                            html_content = await r.text()
+
+                            document: RawDocument = {"url": url, "source": html_content}
+                            results.append(document)
+                            processed_count += 1
+                            logger.success(
+                                f"[{self.name}] ✅ Successfully loaded: {url} ({len(html_content)} characters)"
+                            )
+                        else:
+                            logger.warning(f"[{self.name}] ⚠️ HTTP {r.status} for {url}")
+                            failed_count += 1
+
+                    except aiohttp.ServerTimeoutError:
+                        logger.error(f"[{self.name}] ⏰ Tieout while loading {url}")
+                        failed_count += 1
+                    except aiohttp.ClientConnectorError as e:
+                        logger.error(
+                            f"[{self.name}] ❌ Network exception for {url}: {e}"
                         )
                         failed_count += 1
-
-                except requests.exceptions.Timeout:
-                    logger.error(f"[{self.name}] ⏰ Tieout while loading {url}")
-                    failed_count += 1
-                except requests.exceptions.RequestException as e:
-                    logger.error(f"[{self.name}] ❌ Network exception for {url}: {e}")
-                    failed_count += 1
-                except Exception as e:
-                    logger.error(f"[{self.name}] ❌ exception for {url}: {e}")
-                    failed_count += 1
-            time.sleep(1)
+                    except Exception as e:
+                        logger.error(f"[{self.name}] ❌ exception for {url}: {e}")
+                        failed_count += 1
+                await asyncio.sleep(1)
 
         state["sources"] = results
         logger.info(
