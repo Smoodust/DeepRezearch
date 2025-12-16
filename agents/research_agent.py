@@ -7,7 +7,6 @@ from ddgs import DDGS
 from html_to_markdown import ConversionOptions, convert
 from langchain.chat_models import init_chat_model
 from langgraph.graph import END, StateGraph
-from langgraph.types import Send
 from loguru import logger
 
 from core.state import (RawDocument, SearchedDocument,
@@ -148,8 +147,10 @@ class ResearchAgent(BaseAgent):
                 contexts.append(SITE_INFO_EXTRACTION_TEMPALTE.format(markdown=markdown))
 
             except Exception as e:
-                logger.error(f"[{self.name}] ❌ Error turning into markdown from {url}: {e}")
-        
+                logger.error(
+                    f"[{self.name}] ❌ Error turning into markdown from {url}: {e}"
+                )
+
         start_time = time.time()
         responses = await self.model.abatch(contexts)
         processing_time = time.time() - start_time
@@ -163,14 +164,14 @@ class ResearchAgent(BaseAgent):
             logger.debug(
                 f"[{self.name}] 📝 Extracted result (first 500 characters): {response.content[:500]}..."
             )
-        
+
             document: SearchedDocument = {
                 "url": source["url"],
                 "source": source["source"],
                 "extracted_info": cast(str, response.content),
             }
             results.append(document)
-        
+
         return {"searched_documents": results}
 
     def transform_to_output(self, state: SearchWorkflowState) -> BaseAgentOutput:
