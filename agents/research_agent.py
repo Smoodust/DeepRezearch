@@ -10,19 +10,12 @@ from langchain.chat_models import init_chat_model
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-from core.state import (
-    RawDocument,
-    SearchedDocument,
-    SearchQueriesStructureOutput,
-    SearchWorkflowState,
-)
+from core.state import (RawDocument, SearchedDocument,
+                        SearchQueriesStructureOutput, SearchWorkflowState)
 
 from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
-from .prompts import (
-    SITE_INFO_EXTRACTION_TEMPALTE,
-    get_current_date,
-    query_writer_instructions,
-)
+from .prompts import (SITE_INFO_EXTRACTION_TEMPALTE, get_current_date,
+                      query_writer_instructions)
 
 options = ConversionOptions()
 options.extract_metadata = False
