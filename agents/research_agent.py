@@ -136,55 +136,42 @@ class ResearchAgent(BaseAgent):
         )
         return state
 
-    async def extract_text_from_search(self, state: RawDocument):
-        url = state["url"]
-        logger.info(f"[{self.name}] 🧠 Starting to extract information from: {url}")
+    async def extract_text_from_search(self, state: SearchWorkflowState):
+        contexts = []
+        for doc in state["sources"]:
+            url = doc["url"]
+            logger.info(f"[{self.name}] 🧠 Starting to extract information from: {url}")
 
-        try:
-            markdown = convert(state["source"], options)
+            try:
+                markdown = convert(doc["source"], options)
+                markdown = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", markdown)
+                contexts.append(SITE_INFO_EXTRACTION_TEMPALTE.format(markdown=markdown))
 
-            markdown = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", markdown)
+            except Exception as e:
+                logger.error(f"[{self.name}] ❌ Error turning into markdown from {url}: {e}")
+        
+        start_time = time.time()
+        responses = await self.model.abatch(contexts)
+        processing_time = time.time() - start_time
 
-            context = SITE_INFO_EXTRACTION_TEMPALTE.format(markdown=markdown)
+        results = []
 
-            start_time = time.time()
-            response = await self.model.ainvoke(context)
-            processing_time = time.time() - start_time
-
-            extracted_length = len(cast(str, response.content))
+        for response, source in zip(responses, state["sources"]):
             logger.info(
-                f"[{self.name}] ✅ Extracted {extracted_length} characters in {processing_time:.2f} seconds"
+                f"[{self.name}] ✅ Extracted {len(response.content)} characters in {processing_time:.2f} seconds"
             )
             logger.debug(
                 f"[{self.name}] 📝 Extracted result (first 500 characters): {response.content[:500]}..."
             )
-
+        
             document: SearchedDocument = {
-                "url": url,
-                "source": state["source"],
+                "url": source["url"],
+                "source": source["source"],
                 "extracted_info": cast(str, response.content),
             }
-            return {"searched_documents": [document]}
-
-        except Exception as e:
-            logger.error(f"[{self.name}] ❌ Error fetching from {url}: {e}")
-            document: SearchedDocument = {
-                "url": url,
-                "source": state["source"],
-                "extracted_info": f"Error fetching from {url}: {e}",
-            }
-            return {"searched_documents": [document]}
-
-    def search_map(self, state: SearchWorkflowState):
-        len(state["sources"])
-
-        sends = [Send("extract_info", d) for d in state["sources"]]
-        logger.debug(f"[{self.name}] 📤 Created {len(sends)} tasks to process")
-
-        for i, d in enumerate(state["sources"][:3]):
-            logger.debug(f"[{self.name}] 📎 Source #{i+1}: {d['url'][:100]}...")
-
-        return sends
+            results.append(document)
+        
+        return {"searched_documents": results}
 
     def transform_to_output(self, state: SearchWorkflowState) -> BaseAgentOutput:
         return {
@@ -210,9 +197,7 @@ class ResearchAgent(BaseAgent):
 
             builder.add_edge("create_search_queries", "searching")
 
-            builder.add_conditional_edges(
-                "searching", self.search_map, ["extract_info"]
-            )
+            builder.add_edge("searching", "extract_info")
 
             builder.add_edge("extract_info", "transform_to_output")
             builder.add_edge("transform_to_output", END)
