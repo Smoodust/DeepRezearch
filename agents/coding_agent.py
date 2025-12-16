@@ -2,30 +2,20 @@ import traceback
 from typing import List
 
 from langchain.agents import create_agent
-from langchain.agents.structured_output import ToolStrategy
 from langchain.chat_models import init_chat_model
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import Tool
 from langchain_experimental.utilities import PythonREPL
 from langchain_ollama import ChatOllama
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-from core.state import (
-    Code,
-    CodeAgentState,
-    CodeAnalysis,
-    CodeReview,
-    WorkflowStep,
-)
+from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
+                        WorkflowStep)
 
 from .base_agent import BaseAgent, BaseAgentOutput
-from .prompts import (
-    CODE_GENERATION_PROMPT,
-    CODE_GENERATION_TEMPLATE,
-    CODE_REVIEW_TEMPLATE,
-    TASK_ANALYSIS_TEMPLATE,
-)
+from .prompts import (CODE_GENERATION_PROMPT, CODE_GENERATION_TEMPLATE,
+                      CODE_REVIEW_TEMPLATE, TASK_ANALYSIS_TEMPLATE)
 
 
 class CodingAgent(BaseAgent):
@@ -195,7 +185,9 @@ class CodingAgent(BaseAgent):
         builder.add_edge("reflect", "generate_code")
         builder.add_edge("finalize", END)
 
-        logger.success(f"[{self.name}] ✅ The workflow graph has been successfully built")
+        logger.success(
+            f"[{self.name}] ✅ The workflow graph has been successfully built"
+        )
         return builder
 
     async def _analyze_task(self, state: CodeAgentState) -> CodeAgentState:

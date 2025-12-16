@@ -13,6 +13,7 @@ from core.orchestrator import WorkflowOrchestrator
 
 logger.add("agents.log")
 
+
 class Orchestrator:
     def __init__(self):
         self.orchestrator = WorkflowOrchestrator(model_name="llama3.1:8b")
@@ -34,14 +35,14 @@ class Orchestrator:
         """Run test scenarios"""
 
         test_cases = [
-            #"What's the highway speed limit in Germany in km/h? Convert it to miles per hour for comparison with US limits."
-            #"Find the number of Nobel laureates in 2024 and 2025. What is the difference in percentage?",
-            #"""Research the current 10-year US Treasury bond yield and S&P 500 average dividend yield. 
-            #Then calculate the equity risk premium and create a comparison table for the last 5 years 
-            #if you can find the historical data.""",
+            # "What's the highway speed limit in Germany in km/h? Convert it to miles per hour for comparison with US limits."
+            # "Find the number of Nobel laureates in 2024 and 2025. What is the difference in percentage?",
+            # """Research the current 10-year US Treasury bond yield and S&P 500 average dividend yield.
+            # Then calculate the equity risk premium and create a comparison table for the last 5 years
+            # if you can find the historical data.""",
             # "Hi! How are you? Use synthesis workflow to asnwer this question",
-            #"Calculate 2**222 in python REPL. Provide me an output",
-            #"Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
+            # "Calculate 2**222 in python REPL. Provide me an output",
+            # "Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
             "What's the standard GPA scale (A=4.0, etc.)? Calculate the GPA for someone with 3 A's, 2 B's, and 1 C in a semester."
             # "Research modern approaches to machine learning",
             # "Explain what polymorphism is in OOP",
