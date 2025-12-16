@@ -62,10 +62,6 @@ class CodeAnalysis(BaseModel):
     assumptions: List[str] = Field(description="Any assumptions made during analysis")
 
 
-class GeneratedCode(BaseModel):
-    code: str = Field(description="Complete Python code")
-
-
 class Code(BaseModel):
     code: str = Field(description="Code written by agent")
     output: Optional[str] = Field(default=None, description="Actual execution output")
@@ -95,9 +91,10 @@ class CodeAgentState(BaseAgentState):
 
     needs_retry: bool
     retry_count: int
-    max_retries: int
 
     errors: Annotated[list[str], operator.add]
-    feedback: Annotated[list[str], operator.add]
+
+    current_feedback: Annotated[list[str], operator.add]
+    all_feedback: Annotated[list[str], operator.add]
 
     metadata: Dict[str, Any]
