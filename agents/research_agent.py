@@ -63,11 +63,15 @@ class ResearchAgent(BaseAgent):
             current_date=get_current_date(),
             research_topic=state["workflow_input"],
         )
-        response: SearchQueriesStructureOutput = await self.model_search_queries.ainvoke(context)  # type: ignore
-        logger.info(
-            f"[{self.name}] 🔍 The following search queries were selected: {response.query[:self.n_queries]}"
-        )
-        return {"search_queries": response.query[: self.n_queries]}
+        try: 
+            response: SearchQueriesStructureOutput = await self.model_search_queries.ainvoke(context)  # type: ignore
+            logger.info(
+                f"[{self.name}] 🔍 The following search queries were selected: {response.query[:self.n_queries]}"
+            )
+            return {"search_queries": response.query[: self.n_queries]}
+        except Exception as e:
+            logger.error(f"[{self.name}] ❌ Error in creating search queries: {e}")
+            return {"search_queries": []}
 
     async def searching(self, state: SearchWorkflowState) -> SearchWorkflowState:
         results = []
@@ -160,27 +164,33 @@ class ResearchAgent(BaseAgent):
                 )
 
         start_time = time.time()
-        responses = await self.model.abatch(contexts)
-        processing_time = time.time() - start_time
 
-        results = []
+        try:
+            responses: list = await self.model.abatch(contexts)
+            processing_time = time.time() - start_time
 
-        for response, source in zip(responses, state["sources"]):
-            logger.info(
-                f"[{self.name}] ✅ Extracted {len(response.content)} characters in {processing_time:.2f} seconds"
-            )
-            logger.debug(
-                f"[{self.name}] 📝 Extracted result (first 500 characters): {response.content[:500]}..."
-            )
+            results = []
 
-            document: SearchedDocument = {
-                "url": source["url"],
-                "source": source["source"],
-                "extracted_info": cast(str, response.content),
-            }
-            results.append(document)
+            for response, source in zip(responses, state["sources"]):
+                logger.info(
+                    f"[{self.name}] ✅ Extracted {len(response.content)} characters in {processing_time:.2f} seconds"
+                )
+                logger.debug(
+                    f"[{self.name}] 📝 Extracted result (first 500 characters): {response.content[:500]}..."
+                )
 
-        return {"searched_documents": results}
+                document: SearchedDocument = {
+                    "url": source["url"],
+                    "source": source["source"],
+                    "extracted_info": cast(str, response.content),
+                }
+                results.append(document)
+
+            return {"searched_documents": results}
+        
+        except Exception as e:
+            logger.error(f"[{self.name}] ❌ Error during information extraction: {e}")
+            return {"searched_documents": []}
 
     def transform_to_output(self, state: SearchWorkflowState) -> BaseAgentOutput:
         return {
