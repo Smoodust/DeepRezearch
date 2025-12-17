@@ -47,24 +47,23 @@ class WorkflowStep(str, Enum):
 
 class CodePlan(BaseModel):
     steps: List[str] = Field(
-        default_factory=list, 
-        description="Step-by-step implementation plan. Provide at least 3 specific steps."
+        default_factory=list,
+        description="Step-by-step implementation plan. Provide at least 3 specific steps.",
     )
     libraries: List[str] = Field(
         default_factory=list,
-        description="Required libraries ONLY from standard library. Use [] for standard library only."
+        description="Required libraries ONLY from standard library. Use [] for standard library only.",
     )
     complexity: str = Field(
         default="Medium",
-        description="Implementation complexity: 'Low', 'Medium', or 'High'."
+        description="Implementation complexity: 'Low', 'Medium', or 'High'.",
     )
     risks: List[str] = Field(
         default_factory=list,
-        description="Potential risks and challenges for this specific task."
+        description="Potential risks and challenges for this specific task.",
     )
     test_approach: Optional[List[str]] = Field(
-        default=None, 
-        description="Testing strategy"
+        default=None, description="Testing strategy"
     )
 
 
@@ -105,20 +104,22 @@ class LLMCodeReview(BaseModel):
             return [v]
         return v
 
+
 class CodeReview(LLMCodeReview):
     approved: bool = Field(description="approved or not approved code")
 
     @classmethod
-    def from_llm_review(cls, llm_review: LLMCodeReview, approved_threshold: int = 6) -> "CodeReview":
+    def from_llm_review(
+        cls, llm_review: LLMCodeReview, approved_threshold: int = 6
+    ) -> "CodeReview":
         approved = llm_review.overall_quality >= approved_threshold
         return cls(
             issues=llm_review.issues,
             suggestions=llm_review.suggestions,
             security_concerns=llm_review.security_concerns,
             overall_quality=llm_review.overall_quality,
-            approved=approved
+            approved=approved,
         )
-
 
 
 class CodeAgentState(BaseAgentState):
