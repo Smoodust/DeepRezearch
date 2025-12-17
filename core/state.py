@@ -46,20 +46,45 @@ class WorkflowStep(str, Enum):
 
 
 class CodePlan(BaseModel):
-    steps: List[str] = Field(description="Step-by-step implementation plan")
-    libraries: List[str] = Field(description="Required libraries and dependencies")
-    complexity: str = Field(description="Implementation complexity level")
-    risks: List[str] = Field(description="Potential risks and challenges")
-    test_approach: Optional[List[str]] = Field(description="Testing strategy")
+    steps: List[str] = Field(
+        default_factory=lambda: ["Define implementation approach", "Write code", "Test functionality"],
+        description="Step-by-step implementation plan"
+    )
+    libraries: List[str] = Field(
+        default_factory=lambda: ["standard library"],
+        description="Required libraries and dependencies"
+    )
+    complexity: str = Field(
+        default="Medium",
+        description="Implementation complexity level",
+    )
+    risks: List[str] = Field(
+        default_factory=lambda: ["Time constraints", "Technical dependencies"],
+        description="Potential risks and challenges"
+    )
+    test_approach: Optional[List[str]] = Field(
+        default=None,
+        description="Testing strategy"
+    )
 
 
 class CodeAnalysis(BaseModel):
-    task: str = Field(description="Original user task")
-    plan: CodePlan = Field(description="Technical implementation plan")
+    task: str = Field(
+        default="Unspecified task",
+        description="Original user task"
+    )
+    plan: CodePlan = Field(
+        default_factory=CodePlan,
+        description="Technical implementation plan"
+    )
     requirements: List[str] = Field(
+        default_factory=lambda: ["Functional requirements", "Performance requirements"],
         description="Functional requirements and acceptance criteria"
     )
-    assumptions: List[str] = Field(description="Any assumptions made during analysis")
+    assumptions: List[str] = Field(
+        default_factory=lambda: ["Standard environment", "User requirements are clear"],
+        description="Any assumptions made during analysis"
+    )
 
 
 class Code(BaseModel):
@@ -71,7 +96,10 @@ class CodeReview(BaseModel):
     approved: bool = Field(description="approved or not approved code")
     issues: List[str] = Field(description="list of identified problems")
     suggestions: List[str] = Field(description="list of improvements")
-    security_concerns: List[str] = Field(description="list of security issues")
+    security_concerns: List[str] = Field(
+        default_factory=lambda: ["Not found"],
+        description="list of security issues",
+    )
     overall_quality: int = Field(description="rating from 1-10", ge=1, le=10)
 
     @field_validator("issues", "suggestions", "security_concerns")
