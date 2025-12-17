@@ -47,27 +47,24 @@ class WorkflowStep(str, Enum):
 
 class CodePlan(BaseModel):
     steps: List[str] = Field(
-        default_factory=lambda: [
-            "Define implementation approach",
-            "Write code",
-            "Test functionality",
-        ],
-        description="Step-by-step implementation plan",
+        default_factory=list, 
+        description="Step-by-step implementation plan. Provide at least 3 specific steps."
     )
     libraries: List[str] = Field(
-        default_factory=lambda: ["standard library"],
-        description="Required libraries and dependencies",
+        default_factory=list,
+        description="Required libraries ONLY from standard library. Use [] for standard library only."
     )
     complexity: str = Field(
         default="Medium",
-        description="Implementation complexity level",
+        description="Implementation complexity: 'Low', 'Medium', or 'High'."
     )
     risks: List[str] = Field(
-        default_factory=lambda: ["Time constraints", "Technical dependencies"],
-        description="Potential risks and challenges",
+        default_factory=list,
+        description="Potential risks and challenges for this specific task."
     )
     test_approach: Optional[List[str]] = Field(
-        default=None, description="Testing strategy"
+        default=None, 
+        description="Testing strategy"
     )
 
 
@@ -91,12 +88,11 @@ class Code(BaseModel):
     output: Optional[str] = Field(default=None, description="Actual execution output")
 
 
-class CodeReview(BaseModel):
-    approved: bool = Field(description="approved or not approved code")
+class LLMCodeReview(BaseModel):
     issues: List[str] = Field(description="list of identified problems")
     suggestions: List[str] = Field(description="list of improvements")
     security_concerns: List[str] = Field(
-        default_factory=lambda: ["Not found"],
+        default_factory=list,
         description="list of security issues",
     )
     overall_quality: int = Field(description="rating from 1-10", ge=1, le=10)
@@ -105,7 +101,24 @@ class CodeReview(BaseModel):
     def validate_list_contents(cls, v):
         if v is None:
             return []
+        if isinstance(v, str):
+            return [v]
         return v
+
+class CodeReview(LLMCodeReview):
+    approved: bool = Field(description="approved or not approved code")
+
+    @classmethod
+    def from_llm_review(cls, llm_review: LLMCodeReview, approved_threshold: int = 6) -> "CodeReview":
+        approved = llm_review.overall_quality >= approved_threshold
+        return cls(
+            issues=llm_review.issues,
+            suggestions=llm_review.suggestions,
+            security_concerns=llm_review.security_concerns,
+            overall_quality=llm_review.overall_quality,
+            approved=approved
+        )
+
 
 
 class CodeAgentState(BaseAgentState):
@@ -116,7 +129,8 @@ class CodeAgentState(BaseAgentState):
     generated_code_data: Optional[dict]
     review_data: Optional[dict]
 
-    needs_retry: bool
+    last_successful_generated_code: Optional[dict]
+
     retry_count: int
 
     errors: Annotated[list[str], operator.add]

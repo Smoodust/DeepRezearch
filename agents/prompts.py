@@ -274,7 +274,6 @@ You are an expert code reviewer. Your role is to review generated code against r
 You MUST return valid JSON that matches the CodeReview schema exactly:
 
 {{
-    "approved": true/false,
     "issues": ["issue1", "issue2", ...],
     "suggestions": ["suggestion1", "suggestion2", ...],
     "security_concerns": ["concern1", "concern2", ...],

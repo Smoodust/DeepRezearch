@@ -1,7 +1,9 @@
 import traceback
 from typing import List
+import json
 
 from langchain.agents import create_agent
+
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import Tool
@@ -9,22 +11,34 @@ from langchain_experimental.utilities import PythonREPL
 from langchain_ollama import ChatOllama
 from langgraph.graph import END, StateGraph
 from loguru import logger
-from pydantic import ValidationError
 
-from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
-                        WorkflowStep)
+from core.state import (
+    Code,
+    CodeAgentState,
+    CodeAnalysis,
+    LLMCodeReview,
+    CodeReview,
+    WorkflowStep,
+)
 
 from .base_agent import BaseAgent, BaseAgentOutput
-from .prompts import (CODE_GENERATION_PROMPT, CODE_GENERATION_TEMPLATE,
-                      CODE_REVIEW_TEMPLATE, TASK_ANALYSIS_TEMPLATE)
+from .prompts import (
+    CODE_GENERATION_PROMPT,
+    CODE_GENERATION_TEMPLATE,
+    CODE_REVIEW_TEMPLATE,
+    TASK_ANALYSIS_TEMPLATE,
+)
 
 
 class CodingAgent(BaseAgent):
-    def __init__(self, model_name: str, max_retries: int = 3):
+    def __init__(
+        self, model_name: str, max_retries: int = 3, approval_treshold: int = 6
+    ):
         super().__init__()
 
         self.model_name = model_name
         self.max_retries = max_retries
+        self.approval_treshold = approval_treshold
 
         self.model = init_chat_model(model_name, model_provider="ollama")
         self.tools = [
@@ -36,7 +50,7 @@ class CodingAgent(BaseAgent):
         ]
 
         self.analysis_agent = self.model.with_structured_output(CodeAnalysis)
-        self.review_agent = self.model.with_structured_output(CodeReview)
+        self.review_agent = self.model.with_structured_output(LLMCodeReview)
         self.generation_agent = self._create_generation_agent()
 
     @property
@@ -70,15 +84,16 @@ class CodingAgent(BaseAgent):
         logger.debug(f"[{self.name}] 🔍 Starting analyse")
 
         if not task or not task.strip():
-            raise ValidationError("Task cannot be empty")
+            raise ValueError("Task cannot be empty")
 
         analysis_prompt = TASK_ANALYSIS_TEMPLATE.format(task=task)
 
         try:
             response: CodeAnalysis = await self.analysis_agent.ainvoke(analysis_prompt)
+            logger.debug(f"Raw response from LLM: {response}")
 
             if not response or not isinstance(response, CodeAnalysis):
-                raise ValidationError("Invalid analysis response format")
+                raise ValueError("Invalid analysis response format")
 
             if not response.task:
                 response.task = task
@@ -93,19 +108,30 @@ class CodingAgent(BaseAgent):
             )
             logger.error(f"[{self.name}] Trace:\n{traceback.format_exc()}")
 
-            return CodeAnalysis(task=task)
+            return CodeAnalysis(
+                task=task,
+                steps=[
+                    "Define implementation approach",
+                    "Write code",
+                    "Test functionality",
+                ],
+                libraries=[],
+                complexity="Medium",
+                risks=["Time constraints", "Technical dependencies"],
+                test_approach=None,
+            )
 
     async def generate(
         self, analysis: CodeAnalysis, feedback: List[str] = None
     ) -> Code:
         if not analysis:
-            raise ValidationError("Analysis cannot be None")
+            raise ValueError("Analysis cannot be None")
 
         generation_prompt = CODE_GENERATION_TEMPLATE.format(
             task=analysis.task,
             plan=analysis.plan.model_dump_json(),
             requirements="\n".join(analysis.requirements),
-            feedback="\n".join(feedback) if feedback else "No feedback",
+            feedback="\n".join(feedback[-3:] if feedback else ["No feedback"]),
         )
 
         logger.debug(f"[{self.name}] 🔄 Start generating code")
@@ -127,9 +153,8 @@ class CodingAgent(BaseAgent):
             )
 
             code_str = ai_messsage
-            print(messages)
-            print(code_str)
-            print(tool_output)
+
+            logger.debug(f"{code_str}\n{tool_output}")
 
             logger.success(f"[{self.name}] ✅ Generated and executed code")
 
@@ -156,13 +181,13 @@ class CodingAgent(BaseAgent):
 
     async def review(self, code: Code, analysis: CodeAnalysis) -> CodeReview:
         if not code or not code.code:
-            raise ValidationError("Code cannot be empty for review")
+            raise ValueError("Code cannot be empty for review")
 
         if not analysis:
-            raise ValidationError("Analysis cannot be None for review")
+            raise ValueError("Analysis cannot be None for review")
 
         review_prompt = CODE_REVIEW_TEMPLATE.format(
-            code=code,
+            code=code.model_dump(),
             requirements="\n".join(analysis.requirements),
             plan=analysis.plan.model_dump_json(),
         )
@@ -170,17 +195,22 @@ class CodingAgent(BaseAgent):
         logger.debug(f"[{self.name}] 🔄 Start reviewing code")
 
         try:
-            response: CodeReview = await self.review_agent.ainvoke(review_prompt)
+            response: LLMCodeReview = await self.review_agent.ainvoke(review_prompt)
 
-            if not isinstance(response, CodeReview):
-                raise ValidationError("Invalid review response format")
+            if not isinstance(response, LLMCodeReview):
+                raise ValueError("Invalid review response format")
+
+            code_review = CodeReview.from_llm_review(
+                response, approved_threshold=self.approval_treshold
+            )
 
             logger.success(f"[{self.name}] ✅ Review completed")
             logger.debug(
-                f"[{self.name}] 📊 Review result: approved={response.approved}, качество={response.overall_quality}"
+                f"[{self.name}] 📊 Review result: approved={code_review.approved}, "
+                f"quality={code_review.overall_quality}"
             )
 
-            return response
+            return code_review
         except Exception as e:
             logger.error(f"[{self.name}] ❌ Error in review(): {type(e).__name__}: {e}")
 
@@ -263,6 +293,18 @@ class CodingAgent(BaseAgent):
             generated_code = await self.generate(analysis, feedback)
 
             result_state["generated_code_data"] = generated_code.model_dump()
+
+            try:
+                code_text = (generated_code.code or "").strip()
+                if code_text and not code_text.startswith("# Code generation failed"):
+                    result_state["last_successful_generated_code"] = (
+                        generated_code.model_dump()
+                    )
+            except Exception:
+                logger.debug(
+                    "Failed to store last_successful_generated_code", exc_info=True
+                )
+
             result_state["errors"] = []
 
             return result_state
@@ -333,10 +375,15 @@ class CodingAgent(BaseAgent):
             result_state["current_feedback"] = suggestions
 
             all_feedback = state.get("all_feedback", [])
-            all_feedback.append(suggestions)
-            result_state["all_feedback"] = all_feedback
 
-            result_state["needs_retry"] = len(suggestions) > 0
+            for suggestion in suggestions:
+                if suggestion not in all_feedback:
+                    all_feedback.append(suggestion)
+
+            if len(all_feedback) > 10:
+                all_feedback = all_feedback[-10:]
+
+            result_state["all_feedback"] = all_feedback
 
         except Exception as e:
             logger.error(f"Reflection error: {e}")
