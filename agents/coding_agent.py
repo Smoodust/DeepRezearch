@@ -9,17 +9,14 @@ from langchain_experimental.utilities import PythonREPL
 from langchain_ollama import ChatOllama
 from langgraph.graph import END, StateGraph
 from loguru import logger
-
-from core.state import Code, CodeAgentState, CodeAnalysis, CodeReview, WorkflowStep
 from pydantic import ValidationError
 
+from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
+                        WorkflowStep)
+
 from .base_agent import BaseAgent, BaseAgentOutput
-from .prompts import (
-    CODE_GENERATION_PROMPT,
-    CODE_GENERATION_TEMPLATE,
-    CODE_REVIEW_TEMPLATE,
-    TASK_ANALYSIS_TEMPLATE,
-)
+from .prompts import (CODE_GENERATION_PROMPT, CODE_GENERATION_TEMPLATE,
+                      CODE_REVIEW_TEMPLATE, TASK_ANALYSIS_TEMPLATE)
 
 
 class CodingAgent(BaseAgent):
@@ -340,13 +337,12 @@ class CodingAgent(BaseAgent):
             result_state["all_feedback"] = all_feedback
 
             result_state["needs_retry"] = len(suggestions) > 0
-            
+
         except Exception as e:
             logger.error(f"Reflection error: {e}")
             result_state["current_feedback"] = ["Reflection failed"]
 
         return result_state
-
 
     def _should_reflect(self, state: CodeAgentState) -> str:
         review_data = state.get("review_data")
@@ -378,6 +374,6 @@ class CodingAgent(BaseAgent):
                 if code.output:
                     final_result += f"\nOutput: {code.output}"
             except Exception as e:
-                final_result = f"Error finalizing output: {str(e)}"            
+                final_result = f"Error finalizing output: {str(e)}"
 
         return {"output": final_result}
