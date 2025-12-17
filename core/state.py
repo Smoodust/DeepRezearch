@@ -47,12 +47,16 @@ class WorkflowStep(str, Enum):
 
 class CodePlan(BaseModel):
     steps: List[str] = Field(
-        default_factory=lambda: ["Define implementation approach", "Write code", "Test functionality"],
-        description="Step-by-step implementation plan"
+        default_factory=lambda: [
+            "Define implementation approach",
+            "Write code",
+            "Test functionality",
+        ],
+        description="Step-by-step implementation plan",
     )
     libraries: List[str] = Field(
         default_factory=lambda: ["standard library"],
-        description="Required libraries and dependencies"
+        description="Required libraries and dependencies",
     )
     complexity: str = Field(
         default="Medium",
@@ -60,30 +64,25 @@ class CodePlan(BaseModel):
     )
     risks: List[str] = Field(
         default_factory=lambda: ["Time constraints", "Technical dependencies"],
-        description="Potential risks and challenges"
+        description="Potential risks and challenges",
     )
     test_approach: Optional[List[str]] = Field(
-        default=None,
-        description="Testing strategy"
+        default=None, description="Testing strategy"
     )
 
 
 class CodeAnalysis(BaseModel):
-    task: str = Field(
-        default="Unspecified task",
-        description="Original user task"
-    )
+    task: str = Field(default="Unspecified task", description="Original user task")
     plan: CodePlan = Field(
-        default_factory=CodePlan,
-        description="Technical implementation plan"
+        default_factory=CodePlan, description="Technical implementation plan"
     )
     requirements: List[str] = Field(
         default_factory=lambda: ["Functional requirements", "Performance requirements"],
-        description="Functional requirements and acceptance criteria"
+        description="Functional requirements and acceptance criteria",
     )
     assumptions: List[str] = Field(
         default_factory=lambda: ["Standard environment", "User requirements are clear"],
-        description="Any assumptions made during analysis"
+        description="Any assumptions made during analysis",
     )
 
 
