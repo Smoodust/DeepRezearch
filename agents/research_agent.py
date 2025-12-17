@@ -63,7 +63,7 @@ class ResearchAgent(BaseAgent):
             current_date=get_current_date(),
             research_topic=state["workflow_input"],
         )
-        try: 
+        try:
             response: SearchQueriesStructureOutput = await self.model_search_queries.ainvoke(context)  # type: ignore
             logger.info(
                 f"[{self.name}] 🔍 The following search queries were selected: {response.query[:self.n_queries]}"
@@ -187,7 +187,7 @@ class ResearchAgent(BaseAgent):
                 results.append(document)
 
             return {"searched_documents": results}
-        
+
         except Exception as e:
             logger.error(f"[{self.name}] ❌ Error during information extraction: {e}")
             return {"searched_documents": []}
