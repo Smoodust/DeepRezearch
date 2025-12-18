@@ -6,9 +6,13 @@ from langgraph.graph import END, StateGraph
 from langgraph.graph.message import BaseMessage
 from loguru import logger
 
+from pydantic import BaseModel
 from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
 from .prompts import SYNTHESIS_INPUT, SYNTHESIS_SYSTEM_PROMPT
 
+class SynthesisStructuredOutput(BaseModel):
+    thinking: str
+    final_answer: str
 
 class SynthesisAgentState(BaseAgentState):
     workflow_input: str
@@ -28,6 +32,7 @@ class SynthesisAgent(BaseAgent):
 
         self.model_name = model_name
         self.model = init_chat_model(model_name, model_provider="ollama")
+        self.model_final_answer = self.model.with_structured_output(SynthesisStructuredOutput)
 
     @property
     def name(self) -> str:
@@ -35,19 +40,17 @@ class SynthesisAgent(BaseAgent):
 
     @property
     def purpose(self) -> str:
-        purpose = """
-        Synthesizes multi-source information into coherent, well-structured final responses
-        Capabilities:
-        - Integrates information from multiple agent outputs
-        - Formats responses for different audience types
-        - Structures complex information logically
-        - Maintains conversational tone and clarity
-        - Adheres to specified format requirements
-        Use when: 
-        - Preparing final responses from multi-agent workflows 
-        - Combining research findings with computational result 
-        - Handling conversational greetings and informal queries
-        """
+        purpose = """Synthesizes multi-source information into coherent, well-structured final responses
+Capabilities:
+- Integrates information from multiple agent outputs
+- Formats responses for different audience types
+- Structures complex information logically
+- Maintains conversational tone and clarity
+- Adheres to specified format requirements
+ Use when:
+- Preparing final responses from multi-agent workflows
+- Combining research findings with computational result
+- Handling conversational greetings and informal queries"""
         return purpose
 
     async def synthesis(self, state: SynthesisAgentState) -> BaseAgentOutput:
@@ -56,9 +59,9 @@ class SynthesisAgent(BaseAgent):
         messages.append(
             HumanMessage(SYNTHESIS_INPUT.format(workflow_input=state["workflow_input"]))
         )
-        response = await self.model.ainvoke(messages)
+        response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(messages).content #type: ignore
 
-        logger.info(f"[synthesis]: {response.content}")
+        logger.info(f"[synthesis]: {response}")
 
         return {"output": response.content}  # type: ignore
 
