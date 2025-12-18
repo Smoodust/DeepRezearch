@@ -63,7 +63,9 @@ Capabilities:
         messages.append(
             HumanMessage(SYNTHESIS_INPUT.format(workflow_input=state["workflow_input"]))
         )
-        response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(messages)
+        response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(
+            messages
+        )
         logger.info(f"[synthesis]: {response}")
 
         return {"output": response}  # type: ignore
