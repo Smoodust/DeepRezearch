@@ -63,11 +63,10 @@ Capabilities:
         messages.append(
             HumanMessage(SYNTHESIS_INPUT.format(workflow_input=state["workflow_input"]))
         )
-        response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(messages).content  # type: ignore
-
+        response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(messages)
         logger.info(f"[synthesis]: {response}")
 
-        return {"output": response.content}  # type: ignore
+        return {"output": response}  # type: ignore
 
     def build_graph(self) -> StateGraph:
         try:
