@@ -1,32 +1,25 @@
+import time
 import traceback
+import uuid
 from typing import List
 
-import uuid
-import time
-import re
-
 from langchain.agents import create_agent
-from langgraph.errors import GraphRecursionError
-from langgraph.checkpoint.memory import InMemorySaver
-
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import Tool
 from langchain_experimental.utilities import PythonREPL
 from langchain_ollama import ChatOllama
+from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.errors import GraphRecursionError
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
 from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
                         LLMCodeReview, WorkflowStep)
 
-from .base_agent import BaseAgent, BaseAgentState, BaseAgentOutput
-from .prompts import (
-    CODE_GENERATION_PROMPT,
-    CODE_GENERATION_TEMPLATE,
-    CODE_REVIEW_TEMPLATE,
-    TASK_ANALYSIS_TEMPLATE,
-)
+from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
+from .prompts import (CODE_GENERATION_PROMPT, CODE_GENERATION_TEMPLATE,
+                      CODE_REVIEW_TEMPLATE, TASK_ANALYSIS_TEMPLATE)
 
 
 class CodingAgent(BaseAgent):
