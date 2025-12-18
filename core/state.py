@@ -106,7 +106,6 @@ class CodeReview(LLMCodeReview):
 
         return cls(**review_data)
 
-
 class CodeAgentState(BaseAgentState):
     workflow_input: str
     current_step: str

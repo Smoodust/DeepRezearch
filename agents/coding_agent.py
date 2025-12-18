@@ -17,14 +17,8 @@ from langchain_ollama import ChatOllama
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-from core.state import (
-    Code,
-    CodeAgentState,
-    CodeAnalysis,
-    LLMCodeReview,
-    CodeReview,
-    WorkflowStep,
-)
+from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
+                        LLMCodeReview, WorkflowStep)
 
 from .base_agent import BaseAgent, BaseAgentState, BaseAgentOutput
 from .prompts import (
