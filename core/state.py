@@ -45,21 +45,30 @@ class WorkflowStep(str, Enum):
     FINAL = "final"
 
 
-class CodePlan(BaseModel):
-    steps: List[str] = Field(description="Step-by-step implementation plan")
-    libraries: List[str] = Field(description="Required libraries and dependencies")
-    complexity: str = Field(description="Implementation complexity level")
-    risks: List[str] = Field(description="Potential risks and challenges")
+class CodeAnalysis(BaseModel):
+    steps: List[str] = Field(
+        description="Step-by-step implementation plan. Provide at least 3 specific steps."
+    )
+    libraries: List[str] = Field(
+        description="Required libraries ONLY from standard library. Use [] for standard library only."
+    )
+    complexity: str = Field(
+        description="Implementation complexity: 'Low', 'Medium', or 'High'."
+    )
+    risks: List[str] = Field(
+        description="Potential risks and challenges for this specific task."
+    )
     test_approach: Optional[List[str]] = Field(description="Testing strategy")
 
-
-class CodeAnalysis(BaseModel):
-    task: str = Field(description="Original user task")
-    plan: CodePlan = Field(description="Technical implementation plan")
     requirements: List[str] = Field(
-        description="Functional requirements and acceptance criteria"
+        default_factory=lambda: ["Functional requirements", "Performance requirements"],
+        description="Functional requirements and acceptance criteria",
     )
-    assumptions: List[str] = Field(description="Any assumptions made during analysis")
+
+    assumptions: List[str] = Field(
+        default_factory=lambda: ["Standard environment", "User requirements are clear"],
+        description="Any assumptions made during analysis",
+    )
 
 
 class Code(BaseModel):
@@ -67,18 +76,35 @@ class Code(BaseModel):
     output: Optional[str] = Field(default=None, description="Actual execution output")
 
 
-class CodeReview(BaseModel):
-    approved: bool = Field(description="approved or not approved code")
+class LLMCodeReview(BaseModel):
     issues: List[str] = Field(description="list of identified problems")
     suggestions: List[str] = Field(description="list of improvements")
-    security_concerns: List[str] = Field(description="list of security issues")
+    security_concerns: List[str] = Field(
+        default_factory=list,
+        description="list of security issues",
+    )
     overall_quality: int = Field(description="rating from 1-10", ge=1, le=10)
 
     @field_validator("issues", "suggestions", "security_concerns")
     def validate_list_contents(cls, v):
         if v is None:
             return []
+        if isinstance(v, str):
+            return [v]
         return v
+
+
+class CodeReview(LLMCodeReview):
+    approved: bool = Field(description="approved or not approved code")
+
+    @classmethod
+    def from_llm_review(
+        cls, llm_review: LLMCodeReview, approved_threshold: int = 6
+    ) -> "CodeReview":
+        review_data = llm_review.model_dump()
+        review_data["approved"] = llm_review.overall_quality >= approved_threshold
+
+        return cls(**review_data)
 
 
 class CodeAgentState(BaseAgentState):
@@ -89,7 +115,8 @@ class CodeAgentState(BaseAgentState):
     generated_code_data: Optional[dict]
     review_data: Optional[dict]
 
-    needs_retry: bool
+    last_successful_generated_code: Optional[dict]
+
     retry_count: int
 
     errors: Annotated[list[str], operator.add]

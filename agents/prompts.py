@@ -139,7 +139,6 @@ You are an expert Python computational engineer with specialization in mathemati
 You MUST return valid JSON that matches the CodeAnalysis schema exactly:
 
 {{
-    "task": "original task description",
     "plan": {{
         "steps": ["step1", "step2", ...],
         "libraries": ["lib1", "lib2", ...],
@@ -274,7 +273,6 @@ You are an expert code reviewer. Your role is to review generated code against r
 You MUST return valid JSON that matches the CodeReview schema exactly:
 
 {{
-    "approved": true/false,
     "issues": ["issue1", "issue2", ...],
     "suggestions": ["suggestion1", "suggestion2", ...],
     "security_concerns": ["concern1", "concern2", ...],
@@ -327,6 +325,9 @@ Return the complete Python code.
 
 CODE_REVIEW_TEMPLATE = """
 Review the following Python code against requirements:
+
+ORIGINAL TASK:
+{task}
 
 CODE:
 {code}

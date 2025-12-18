@@ -1,13 +1,13 @@
+import asyncio
 import re
 import time
 from typing import Optional, cast
 
-import requests
+import aiohttp
 from ddgs import DDGS
 from html_to_markdown import ConversionOptions, convert
 from langchain.chat_models import init_chat_model
 from langgraph.graph import END, StateGraph
-from langgraph.types import Send
 from loguru import logger
 
 from core.state import (RawDocument, SearchedDocument,
@@ -31,6 +31,9 @@ class ResearchAgent(BaseAgent):
         )
         self.n_queries = n_queries
         self.max_result = max_result
+        self.user_agent = {
+            "User-Agent": "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
+        }
         self._compiled_graph = None
 
         logger.info(
@@ -60,75 +63,83 @@ class ResearchAgent(BaseAgent):
             current_date=get_current_date(),
             research_topic=state["workflow_input"],
         )
-        response: SearchQueriesStructureOutput = await self.model_search_queries.ainvoke(context)  # type: ignore
-        logger.info(
-            f"[{self.name}] 🔍 The following search queries were selected: {response.query[:self.n_queries]}"
-        )
-        return {"search_queries": response.query[: self.n_queries]}
+        try:
+            response: SearchQueriesStructureOutput = await self.model_search_queries.ainvoke(context)  # type: ignore
+            logger.info(
+                f"[{self.name}] 🔍 The following search queries were selected: {response.query[:self.n_queries]}"
+            )
+            return {"search_queries": response.query[: self.n_queries]}
+        except Exception as e:
+            logger.error(f"[{self.name}] ❌ Error in creating search queries: {e}")
+            return {"search_queries": []}
 
-    def searching(self, state: SearchWorkflowState) -> SearchWorkflowState:
+    async def searching(self, state: SearchWorkflowState) -> SearchWorkflowState:
         results = []
+
+        connector = aiohttp.TCPConnector(limit_per_host=5, force_close=True)
+        timeout = aiohttp.ClientTimeout(total=30, connect=10)
+
         processed_count = 0
         failed_count = 0
 
-        for query in state["search_queries"]:
-            logger.info(
-                f"[{self.name}] 🔍 Start searching: '{query}' (max results: {self.max_result})"
-            )
-
-            try:
-                search_results = DDGS().text(query, max_results=self.max_result)  # type: ignore
+        async with aiohttp.ClientSession(
+            connector=connector, timeout=timeout, headers=self.user_agent
+        ) as session:
+            for query in state["search_queries"]:
                 logger.info(
-                    f"[{self.name}] 📊 Received  {len(search_results)} results from the search engine"
+                    f"[{self.name}] 🔍 Start searching: '{query}' (max results: {self.max_result})"
                 )
-            except Exception as e:
-                logger.error(f"[{self.name}] ❌ Error while searching: {e}")
-                time.sleep(1)
-                continue
-
-            for idx, x in enumerate(search_results, 1):
-                time.sleep(0.5)
-                url: Optional[str] = x.get("href", None)
-                title: Optional[str] = x.get("title", "Без заголовка")
-
-                if url is None:
-                    logger.warning(
-                        f"[{self.name}] ⚠️ Resultт #{idx}: URL is missing, skip"
-                    )
-                    continue
 
                 try:
-                    r = requests.get(
-                        url,
-                        headers={
-                            "User-Agent": "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
-                        },
-                        timeout=10,
-                    )
+                    search_results = DDGS().text(query, max_results=self.max_result)  # type: ignore
 
-                    if r.status_code == 200:
-                        document: RawDocument = {"url": url, "source": r.text}
-                        results.append(document)
-                        processed_count += 1
-                        logger.success(
-                            f"[{self.name}] ✅ Successfully loaded: {url} ({len(r.text)} characters)"
-                        )
-                    else:
+                    logger.info(
+                        f"[{self.name}] 📊 Received  {len(search_results)} results from the search engine"
+                    )
+                except Exception as e:
+                    logger.error(f"[{self.name}] ❌ Error while searching: {e}")
+                    await asyncio.sleep(1)
+                    continue
+
+                for idx, x in enumerate(search_results, 1):
+                    await asyncio.sleep(0.5)
+                    url: Optional[str] = x.get("href", None)
+                    title: Optional[str] = x.get("title", "Без заголовка")
+
+                    if url is None:
                         logger.warning(
-                            f"[{self.name}] ⚠️ HTTP {r.status_code} for {url}"
+                            f"[{self.name}] ⚠️ Resultт #{idx}: URL is missing, skip"
+                        )
+                        continue
+
+                    try:
+                        r = await session.get(url)
+
+                        if r.status == 200:
+                            html_content = await r.text()
+
+                            document: RawDocument = {"url": url, "source": html_content}
+                            results.append(document)
+                            processed_count += 1
+                            logger.success(
+                                f"[{self.name}] ✅ Successfully loaded: {url} ({len(html_content)} characters)"
+                            )
+                        else:
+                            logger.warning(f"[{self.name}] ⚠️ HTTP {r.status} for {url}")
+                            failed_count += 1
+
+                    except aiohttp.ServerTimeoutError:
+                        logger.error(f"[{self.name}] ⏰ Tieout while loading {url}")
+                        failed_count += 1
+                    except aiohttp.ClientConnectorError as e:
+                        logger.error(
+                            f"[{self.name}] ❌ Network exception for {url}: {e}"
                         )
                         failed_count += 1
-
-                except requests.exceptions.Timeout:
-                    logger.error(f"[{self.name}] ⏰ Tieout while loading {url}")
-                    failed_count += 1
-                except requests.exceptions.RequestException as e:
-                    logger.error(f"[{self.name}] ❌ Network exception for {url}: {e}")
-                    failed_count += 1
-                except Exception as e:
-                    logger.error(f"[{self.name}] ❌ exception for {url}: {e}")
-                    failed_count += 1
-            time.sleep(1)
+                    except Exception as e:
+                        logger.error(f"[{self.name}] ❌ exception for {url}: {e}")
+                        failed_count += 1
+                await asyncio.sleep(1)
 
         state["sources"] = results
         logger.info(
@@ -148,30 +159,38 @@ class ResearchAgent(BaseAgent):
                 contexts.append(SITE_INFO_EXTRACTION_TEMPALTE.format(markdown=markdown))
 
             except Exception as e:
-                logger.error(f"[{self.name}] ❌ Error turning into markdown from {url}: {e}")
-        
+                logger.error(
+                    f"[{self.name}] ❌ Error turning into markdown from {url}: {e}"
+                )
+
         start_time = time.time()
-        responses = await self.model.abatch(contexts)
-        processing_time = time.time() - start_time
 
-        results = []
+        try:
+            responses: list = await self.model.abatch(contexts)
+            processing_time = time.time() - start_time
 
-        for response, source in zip(responses, state["sources"]):
-            logger.info(
-                f"[{self.name}] ✅ Extracted {len(response.content)} characters in {processing_time:.2f} seconds"
-            )
-            logger.debug(
-                f"[{self.name}] 📝 Extracted result (first 500 characters): {response.content[:500]}..."
-            )
-        
-            document: SearchedDocument = {
-                "url": source["url"],
-                "source": source["source"],
-                "extracted_info": cast(str, response.content),
-            }
-            results.append(document)
-        
-        return {"searched_documents": results}
+            results = []
+
+            for response, source in zip(responses, state["sources"]):
+                logger.info(
+                    f"[{self.name}] ✅ Extracted {len(response.content)} characters in {processing_time:.2f} seconds"
+                )
+                logger.debug(
+                    f"[{self.name}] 📝 Extracted result (first 500 characters): {response.content[:500]}..."
+                )
+
+                document: SearchedDocument = {
+                    "url": source["url"],
+                    "source": source["source"],
+                    "extracted_info": cast(str, response.content),
+                }
+                results.append(document)
+
+            return {"searched_documents": results}
+
+        except Exception as e:
+            logger.error(f"[{self.name}] ❌ Error during information extraction: {e}")
+            return {"searched_documents": []}
 
     def transform_to_output(self, state: SearchWorkflowState) -> BaseAgentOutput:
         return {
