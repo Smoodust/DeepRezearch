@@ -1,8 +1,13 @@
 import traceback
 from typing import List
-import json
+
+import uuid
+import time
+import re
 
 from langchain.agents import create_agent
+from langgraph.errors import GraphRecursionError
+from langgraph.checkpoint.memory import InMemorySaver
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
@@ -21,7 +26,7 @@ from core.state import (
     WorkflowStep,
 )
 
-from .base_agent import BaseAgent, BaseAgentOutput
+from .base_agent import BaseAgent, BaseAgentState, BaseAgentOutput
 from .prompts import (
     CODE_GENERATION_PROMPT,
     CODE_GENERATION_TEMPLATE,
@@ -37,6 +42,10 @@ class CodingAgent(BaseAgent):
         super().__init__()
 
         self.model_name = model_name
+
+        self.checkpointer = InMemorySaver()
+        self.thread_id = None
+
         self.max_retries = max_retries
         self.approval_treshold = approval_treshold
 
@@ -78,6 +87,7 @@ class CodingAgent(BaseAgent):
             model=model,
             tools=self.tools,
             system_prompt=CODE_GENERATION_PROMPT,
+            checkpointer=self.checkpointer,
         )
 
     async def analyze(self, task: str) -> CodeAnalysis:
@@ -95,9 +105,6 @@ class CodingAgent(BaseAgent):
             if not response or not isinstance(response, CodeAnalysis):
                 raise ValueError("Invalid analysis response format")
 
-            if not response.task:
-                response.task = task
-
             logger.success(f"[{self.name}] ✅ Analysis completed")
             logger.debug(f"[{self.name}] 📊 Analysis result received")
 
@@ -109,7 +116,6 @@ class CodingAgent(BaseAgent):
             logger.error(f"[{self.name}] Trace:\n{traceback.format_exc()}")
 
             return CodeAnalysis(
-                task=task,
                 steps=[
                     "Define implementation approach",
                     "Write code",
@@ -122,25 +128,30 @@ class CodingAgent(BaseAgent):
             )
 
     async def generate(
-        self, analysis: CodeAnalysis, feedback: List[str] = None
+        self, task: str, analysis: CodeAnalysis, feedback: List[str] = None
     ) -> Code:
         if not analysis:
             raise ValueError("Analysis cannot be None")
 
         generation_prompt = CODE_GENERATION_TEMPLATE.format(
-            task=analysis.task,
-            plan=analysis.plan.model_dump_json(),
+            task=task,
+            plan=analysis.model_dump_json(),
             requirements="\n".join(analysis.requirements),
             feedback="\n".join(feedback[-3:] if feedback else ["No feedback"]),
         )
 
         logger.debug(f"[{self.name}] 🔄 Start generating code")
 
-        try:
-            agent_input = {"messages": [HumanMessage(content=generation_prompt)]}
-            response: dict = await self.generation_agent.ainvoke(agent_input)
+        messages = []
 
-            messages = response["messages"]
+        try:
+            config = {"configurable": {"thread_id": self.thread_id}}
+            agent_input = {"messages": [HumanMessage(content=generation_prompt)]}
+            response: dict = await self.generation_agent.ainvoke(
+                agent_input, config=config
+            )
+
+            messages = response.get("messages", [])
 
             tool_output = next(
                 (m.content for m in reversed(messages) if isinstance(m, ToolMessage)),
@@ -160,6 +171,38 @@ class CodingAgent(BaseAgent):
 
             return Code(code=code_str, output=tool_output)
 
+        except GraphRecursionError:
+            logger.error(
+                f"[{self.name}] ❌ Agent stuck in infinite loop. Check agent configuration or task complexity."
+            )
+
+            state = self.generation_agent.get_state(config)
+            result = state.values
+            messages = result.get("messages", [])
+
+            tool_output = next(
+                (m.content for m in reversed(messages) if isinstance(m, ToolMessage)),
+                "[No output produced]",
+            )
+
+            ai_messsage = next(
+                (m.tool_calls for m in reversed(messages) if isinstance(m, AIMessage)),
+                "[No output produced]",
+            )
+
+            for tc in ai_messsage:
+                if tc.get("name") == "python_repl":
+                    args = tc.get("args", {})
+                    if "__arg1" in args:
+                        code_str = args["__arg1"]
+
+            logger.debug(f"{code_str}\n{tool_output}")
+
+            return Code(
+                code=code_str,
+                output=tool_output,
+            )
+
         except Exception as e:
             logger.error(f"[{self.name}] ❌ Critical generation failure: {str(e)}")
             logger.debug(f"[{self.name}] Input prompt:\n{generation_prompt}")
@@ -167,19 +210,9 @@ class CodingAgent(BaseAgent):
             if "code_str" not in locals():
                 code_str = "[Code generation failed]"
 
-            if "recursion" in str(e).lower() or "GRAPH_RECURSION_LIMIT" in str(e):
-                logger.error(
-                    f"[{self.name}] ❌ Agent stuck in infinite loop. Check agent configuration or task complexity."
-                )
-                print(code_str)
-                return Code(
-                    code=code_str,
-                    output=f"Agent failed due to recursion limit. Try simplifying the task or increasing recursion_limit. Error: {str(e)}",
-                )
-
             return Code(code=code_str, output=str(e))
 
-    async def review(self, code: Code, analysis: CodeAnalysis) -> CodeReview:
+    async def review(self, task: str, code: Code, analysis: CodeAnalysis) -> CodeReview:
         if not code or not code.code:
             raise ValueError("Code cannot be empty for review")
 
@@ -187,9 +220,10 @@ class CodingAgent(BaseAgent):
             raise ValueError("Analysis cannot be None for review")
 
         review_prompt = CODE_REVIEW_TEMPLATE.format(
+            task=task,
             code=code.model_dump(),
             requirements="\n".join(analysis.requirements),
-            plan=analysis.plan.model_dump_json(),
+            plan=analysis.model_dump_json(),
         )
 
         logger.debug(f"[{self.name}] 🔄 Start reviewing code")
@@ -251,6 +285,14 @@ class CodingAgent(BaseAgent):
         )
         return builder
 
+    async def run(self, state: BaseAgentState) -> BaseAgentOutput:
+        uid = uuid.uuid4().hex[:12]
+        ts = int(time.time() * 1000)
+
+        self.thread_id = f"{uid}-{ts}"
+
+        return await self.compiled_graph.ainvoke(state)  # type: ignore
+
     async def _analyze_task(self, state: CodeAgentState) -> CodeAgentState:
         result_state = dict(state)
         result_state["current_step"] = WorkflowStep.ANALYSIS.value
@@ -290,13 +332,15 @@ class CodingAgent(BaseAgent):
 
             logger.info(f"Try №{retry_count + 1} out of {self.max_retries}")
 
-            generated_code = await self.generate(analysis, feedback)
+            generated_code = await self.generate(
+                state["workflow_input"], analysis, feedback
+            )
 
             result_state["generated_code_data"] = generated_code.model_dump()
 
             try:
                 code_text = (generated_code.code or "").strip()
-                if code_text and not code_text.startswith("# Code generation failed"):
+                if code_text and not code_text.startswith("[Code generation failed]"):
                     result_state["last_successful_generated_code"] = (
                         generated_code.model_dump()
                     )
@@ -339,7 +383,9 @@ class CodingAgent(BaseAgent):
             analysis = CodeAnalysis.model_validate(state["analysis_data"])
             generated_code = Code.model_validate(state["generated_code_data"])
 
-            review = await self.review(generated_code, analysis)
+            review = await self.review(
+                result_state["workflow_input"], generated_code, analysis
+            )
 
             result_state["review_data"] = review.model_dump()
             result_state["feedback"] = review.suggestions if not review.approved else []
@@ -415,12 +461,31 @@ class CodingAgent(BaseAgent):
         final_result = ""
         if state.get("generated_code_data"):
             try:
-                code = Code.model_validate(state["generated_code_data"])
+                succesfull_generation = (
+                    state["generated_code_data"]
+                    if state["review_data"]["approved"]
+                    else state["last_successful_generated_code"]
+                )
+                code = Code.model_validate(succesfull_generation)
                 final_result = f"Code: {code.code}"
 
                 if code.output:
                     final_result += f"\nOutput: {code.output}"
             except Exception as e:
                 final_result = f"Error finalizing output: {str(e)}"
+
+        logger.success(f"FINAL: { {"output": final_result} }")
+
+        try:
+            await self.checkpointer.adelete_thread(self.thread_id)
+        except Exception as e:
+            logger.warning(
+                "[%s] Failed to cleanup checkpointer for thread_id=%s: %s",
+                self.name,
+                self.thread_id,
+                e,
+            )
+        finally:
+            self.thread_id = None
 
         return {"output": final_result}
