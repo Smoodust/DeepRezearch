@@ -103,7 +103,7 @@ context: MUST include ALL relevant information from previous agents:
         response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(
             messages
         )
-        logger.info(f"[synthesis]: {response}")
+        logger.info(f"[synthesis]: {response.final_answer}")
 
         return {"output": response}  # type: ignore
 

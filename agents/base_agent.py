@@ -38,10 +38,6 @@ class BaseAgent(ABC):
     def build_graph(self) -> StateGraph:
         pass
 
-    @abstractmethod
-    def construct_context(self, messages) -> BaseAgentState:
-        pass
-
     @property
     def name(self) -> str:
         raise NotImplementedError()

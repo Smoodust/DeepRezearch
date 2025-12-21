@@ -67,6 +67,7 @@ class WorkflowOrchestrator:
         self._workflow_type_template = None
         self._workflow_type_user_template = None
         self._workflow_input_template = None
+        self._analysis_template = None
 
     def register_workflow(self, workflow: BaseAgent):
         """Register a workflow with the orchestrator"""
@@ -163,11 +164,11 @@ class WorkflowOrchestrator:
             ]
 
             decision_data: OrchestratorInputDecision = await self.model_workflow_input.ainvoke(request_messages)  # type: ignore
-
-            logger.success(
-                f"[orchestrator] made wrote input for agent: {decision_data.workflow_input[:100]}... with context {decision_data.context[:100]}..."
-            )
             logger.info(f"Decision thinking: {decision_data.thinking}")
+            logger.success(
+                f"[orchestrator] made wrote input for agent: {decision_data.workflow_input}"
+            )
+            logger.info(f"Context: {decision_data.context}")
 
         except Exception as e:
             logger.error(f"Analysis error: {repr(e)}")
