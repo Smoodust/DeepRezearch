@@ -1,0 +1,15 @@
+USER ORIGINAL REQUEST: {{ user_input }}
+
+{% if history_summary %}
+PREVIOUS AGENT OUTPUTS:
+{{ history_summary }}
+{% endif %}
+
+Based on the user request and any previous agent outputs, decide what should happen next.
+
+Options:
+1. If enough information has been gathered to answer the user → Choose SYNTHESIS agent
+2. If more information is needed → Choose appropriate agent (WEB_RESEARCHER for research, PYTHON_EXECUTOR for calculations)
+3. If the current agent output needs further processing → Choose appropriate follow-up agent
+
+Think step by step and return ONLY JSON:

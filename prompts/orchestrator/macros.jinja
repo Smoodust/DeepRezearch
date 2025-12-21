@@ -1,0 +1,13 @@
+{% macro render_workflows_list(workflows) -%}
+{% for idx, wf in workflows|enumerate(start=1) %}
+{{ idx }}. {{ wf.name }} - {{ wf.purpose }}
+{% endfor %}
+{%- endmacro %}
+
+{% macro summarize_output(text, limit=500) -%}
+{% if text | length > limit %}
+{{ (text[:limit] ~ "...") }}
+{% else %}
+{{ text }}
+{% endif %}
+{%- endmacro %}

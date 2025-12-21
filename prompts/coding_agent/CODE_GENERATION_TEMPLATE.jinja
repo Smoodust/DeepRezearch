@@ -1,0 +1,23 @@
+Generate Python code based on the following analysis:
+
+TASK: {{ task }}
+
+IMPLEMENTATION PLAN:
+{{ plan | tojson(indent=2) }}
+
+REQUIREMENTS:
+{% for r in requirements %}
+- {{ r }}
+{% endfor %}
+
+FEEDBACK FROM PREVIOUS ITERATION:
+{% if feedback %}
+{% for f in feedback %}
+- {{ f }}
+{% endfor %}
+{% else %}
+No feedback
+{% endif %}
+
+Please write complete, production-ready Python code that addresses all requirements and feedback.
+Return the complete Python code.

@@ -8,7 +8,6 @@ from loguru import logger
 from pydantic import BaseModel
 
 from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
-from .prompts import SYNTHESIS_INPUT, SYNTHESIS_SYSTEM_PROMPT
 
 
 class SynthesisStructuredOutput(BaseModel):
@@ -38,6 +37,9 @@ class SynthesisAgent(BaseAgent):
             SynthesisStructuredOutput
         )
 
+        self._system_prompt = None
+        self._synth_input_tpl = None
+
     @property
     def name(self) -> str:
         return "RESPONSE_SYNTHESIZER"
@@ -58,10 +60,22 @@ Capabilities:
         return purpose
 
     async def synthesis(self, state: SynthesisAgentState) -> BaseAgentOutput:
+        if self._system_prompt is None:
+            self._system_prompt = self._load_template(
+                "synthesis_agent/SYNTHESIS_SYSTEM_PROMPT.jinja"
+            ).render()
+
+        if self._synth_input_tpl is None:
+            self._synth_input_tpl = self._load_template(
+                "synthesis_agent/SYNTHESIS_INPUT.jinja"
+            )
+
         messages = state["messages"]
-        messages.append(SystemMessage(SYNTHESIS_SYSTEM_PROMPT))
+        messages.append(SystemMessage(self._system_prompt))
         messages.append(
-            HumanMessage(SYNTHESIS_INPUT.format(workflow_input=state["workflow_input"]))
+            HumanMessage(
+                self._synth_input_tpl.render(workflow_input=state["workflow_input"])
+            )
         )
         response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(
             messages

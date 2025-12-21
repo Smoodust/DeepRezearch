@@ -18,8 +18,6 @@ from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
                         LLMCodeReview, WorkflowStep)
 
 from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
-from .prompts import (CODE_GENERATION_PROMPT, CODE_GENERATION_TEMPLATE,
-                      CODE_REVIEW_TEMPLATE, TASK_ANALYSIS_TEMPLATE)
 
 
 class CodingAgent(BaseAgent):
@@ -35,6 +33,11 @@ class CodingAgent(BaseAgent):
 
         self.max_retries = max_retries
         self.approval_treshold = approval_treshold
+
+        self._analysis_tpl = None
+        self._generation_tpl = None
+        self._review_tpl = None
+        self._system_tpl = None
 
         self.model = init_chat_model(model_name, model_provider="ollama")
         self.tools = [
@@ -70,10 +73,15 @@ class CodingAgent(BaseAgent):
         model = ChatOllama(
             model=self.model_name, format="json", temperature=0.1, num_predict=2048
         )
+
+        system_prompt = self._load_template(
+            "coding_agent/CODE_GENERATION_PROMPT.jinja"
+        ).render()
+
         return create_agent(
             model=model,
             tools=self.tools,
-            system_prompt=CODE_GENERATION_PROMPT,
+            system_prompt=system_prompt,
             checkpointer=self.checkpointer,
         )
 
@@ -83,7 +91,12 @@ class CodingAgent(BaseAgent):
         if not task or not task.strip():
             raise ValueError("Task cannot be empty")
 
-        analysis_prompt = TASK_ANALYSIS_TEMPLATE.format(task=task)
+        if self._analysis_tpl is None:
+            self._analysis_tpl = self._load_template(
+                "coding_agent/TASK_ANALYSIS_TEMPLATE.jinja"
+            )
+
+        analysis_prompt = self._analysis_tpl.render(task=task)
 
         try:
             response: CodeAnalysis = await self.analysis_agent.ainvoke(analysis_prompt)
@@ -120,11 +133,16 @@ class CodingAgent(BaseAgent):
         if not analysis:
             raise ValueError("Analysis cannot be None")
 
-        generation_prompt = CODE_GENERATION_TEMPLATE.format(
+        if self._generation_tpl is None:
+            self._generation_tpl = self._load_template(
+                "coding_agent/CODE_GENERATION_TEMPLATE.jinja"
+            )
+
+        generation_prompt = self._generation_tpl.render(
             task=task,
-            plan=analysis.model_dump_json(),
-            requirements="\n".join(analysis.requirements),
-            feedback="\n".join(feedback[-3:] if feedback else ["No feedback"]),
+            plan=analysis.model_dump(),
+            requirements=analysis.requirements,
+            feedback=feedback[-3:] if feedback else [],
         )
 
         logger.debug(f"[{self.name}] 🔄 Start generating code")
@@ -206,11 +224,16 @@ class CodingAgent(BaseAgent):
         if not analysis:
             raise ValueError("Analysis cannot be None for review")
 
-        review_prompt = CODE_REVIEW_TEMPLATE.format(
+        if self._review_tpl is None:
+            self._review_tpl = self._load_template(
+                "coding_agent/CODE_REVIEW_TEMPLATE.jinja"
+            )
+
+        review_prompt = self._review_tpl.render(
             task=task,
             code=code.model_dump(),
-            requirements="\n".join(analysis.requirements),
-            plan=analysis.model_dump_json(),
+            requirements=analysis.requirements,
+            plan=analysis.model_dump(),
         )
 
         logger.debug(f"[{self.name}] 🔄 Start reviewing code")

@@ -1,4 +1,6 @@
 from typing import Annotated, Dict, TypedDict, cast
+from jinja2 import Environment, FileSystemLoader, select_autoescape, Template
+import os
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, SystemMessage
@@ -8,45 +10,6 @@ from pydantic import BaseModel, Field
 
 from agents.base_agent import BaseAgent
 from agents.synthesis_agent import SynthesisAgent, SynthesisAgentState
-
-workflow_system_prompt = """
-You are the Master Control Unit (MCU) for a specialized AI team. Your role is SOLELY to analyze incoming requests and route them to the appropriate specialist agent.
-
-CORE SPECIALIST AGENTS:
-- You are a DISPATCHER, not a problem solver
-- You NEVER execute tasks yourself
-- You NEVER write code, perform calculations, or conduct research
-- Your ONLY output is a routing decision in JSON format
-
-AVAILABLE WORKFLOWS:
-{workflows_list}
-
-DECISION CRITERIA:
-- Technical/calculation tasks → PYTHON_EXECUTOR
-- Information/research tasks → WEB_RESEARCHER
-- You received enough information to respond to the user → RESPONSE_SYNTHESIZER
-- Mixed tasks → Choose primary need, one agent at a time
-- Unclear requests → Ask for clarification via workflow_input
-
-CRITICAL CONSTRAINTS:
-- NEVER attempt to answer questions yourself
-- NEVER combine agent capabilities in one decision
-- ALWAYS output valid JSON with NO additional text
-- If uncertain, assign with lower confidence and clear workflow_input
-
-CRITICAL: You MUST respond with ONLY a JSON object in this exact format:
-{{
-    "thinking": "Thoughts and brief explanation of classification",
-    "workflow_type": "{workflow_variants}",
-    "workflow_input": "command or request that this workflow should do",
-    "confidence": 0.0-1.0
-}}
-
-
-DO NOT add any other text, explanations, or answers before or after the JSON.
-DO NOT use markdown formatting.
-DO NOT include code examples.
-"""
 
 
 class OrchestratorDecision(BaseModel):
@@ -69,14 +32,43 @@ class OrchestratorState(TypedDict):
 
 
 class WorkflowOrchestrator:
-    def __init__(self, model_name: str = "qwen3:0.6b"):
+    def __init__(
+        self,
+        model_name: str = "qwen3:0.6b",
+        templates_dir: str | None = "prompts/orchestrator",
+    ):
         self.base_model = init_chat_model(model_name, model_provider="ollama")
         self.model = self.base_model.with_structured_output(OrchestratorDecision)
         self.workflows: Dict[str, BaseAgent] = {}
 
+        self.template_dir = templates_dir
+        if templates_dir and os.path.isdir(templates_dir):
+            self.jinja_env = Environment(
+                loader=FileSystemLoader(templates_dir),
+                autoescape=select_autoescape(enabled_extensions=()),
+                trim_blocks=True,
+                lstrip_blocks=True,
+            )
+        else:
+            self.jinja_env = None
+
+        self._system_template = None
+        self._analysis_template = None
+        self._decision_schema = None
+
     def register_workflow(self, workflow: BaseAgent):
         """Register a workflow with the orchestrator"""
         self.workflows[workflow.name] = workflow
+
+    def _load_template(self, name: str, default: str) -> Template:
+        if self.jinja_env:
+            try:
+                return self.jinja_env.get_template(name)
+            except Exception:
+                logger.warning(
+                    f"Template {name} not found in {self.templates_dir}, using default."
+                )
+        return Template(default)
 
     @property
     def system_prompt(self) -> str:
@@ -87,40 +79,61 @@ class WorkflowOrchestrator:
 
         workflow_variants = "|".join([x for x in self.workflows.keys()])
 
-        return workflow_system_prompt.format(
-            workflows_list=workflows_list, workflow_variants=workflow_variants
+        if self._system_template is None:
+            default_system = """<DEFAULT SYSTEM PROMPT FALLBACK - you can replace with file prompts/orchestrator/system_prompt.j2>"""
+            self._system_template = self._load_template(
+                "SYSTEM_PROMPT.jinja", default_system
+            )
+
+        if self._decision_schema is None:
+            default_schema = '{"thinking": "{{ thinking_placeholder }}","workflow_type": "{{ workflow_variants }}","workflow_input": "{{ workflow_input_placeholder }}","confidence": {{ confidence_placeholder }}}'
+            self._decision_schema = self._load_template(
+                "DECISION_SCHEMA.jinja", default_schema
+            )
+
+        decision_schema_rendered = self._decision_schema.render(
+            thinking_placeholder="{{thinking}}",
+            workflow_variants=workflow_variants,
+            workflow_input_placeholder="{{workflow_input}}",
+            confidence_placeholder="{{confidence}}",
+        )
+
+        rendered = self._system_template.render(
+            workflows_list=workflows_list,
+            workflow_variants=workflow_variants,
+            decision_schema=decision_schema_rendered,
+        )
+        return rendered
+
+    def render_analysis_prompt(
+        self, user_input: str, history_messages: list[BaseMessage]
+    ):
+        agent_outputs = [
+            m.content for m in history_messages if isinstance(m, AIMessage)
+        ]
+        history_summary = ""
+        if agent_outputs:
+            formatted = []
+            for out in agent_outputs:
+                if len(out) > 500:
+                    formatted.append(f"• {out[:500]}...")
+                else:
+                    formatted.append(f"• {out}")
+            history_summary = "\n".join(formatted)
+
+        if self._analysis_template is None:
+            default_analysis = "USER ORIGINAL REQUEST: {{ user_input }}\n\n{% if history_summary %}PREVIOUS AGENT OUTPUTS:\n{{ history_summary }}\n{% endif %}\nBased on the user request and any previous agent outputs, decide what should happen next.\n\nThink step by step and return ONLY JSON:\n"
+            self._analysis_template = self._load_template(
+                "ANALYSIS_PROMPT.jinja", default_analysis
+            )
+
+        return self._analysis_template.render(
+            user_input=user_input, history_summary=history_summary
         )
 
     async def analyze_request(self, state: OrchestratorState) -> OrchestratorState:
         """Analyze the request and make routing decision"""
-
-        # Создаем сводку о том, что уже было сделано
-        history_summary = ""
-        if state["messages"]:
-            # Извлекаем только выводы агентов (AIMessage)
-            agent_outputs = [
-                msg.content for msg in state["messages"] if isinstance(msg, AIMessage)
-            ]
-            if agent_outputs:
-                history_summary = f"""
-    PREVIOUS AGENT OUTPUTS:
-    {chr(10).join([f"• {output[:500]}..." if len(output) > 500 else f"• {output}" for output in agent_outputs])}
-    """
-
-        analysis_prompt = f"""
-    USER ORIGINAL REQUEST: {state["user_input"]}
-
-    {history_summary}
-
-    Based on the user request and any previous agent outputs, decide what should happen next.
-
-    Options:
-    1. If enough information has been gathered to answer the user → Choose SYNTHESIS agent
-    2. If more information is needed → Choose appropriate agent (WEB_RESEARCHER for research, PYTHON_EXECUTOR for calculations)
-    3. If the current agent output needs further processing → Choose appropriate follow-up agent
-
-    Think step by step and return ONLY JSON:
-    """
+        analysis_prompt = self.render_analysis_prompt(state["user_input"], state["messages"])
 
         try:
             # Формируем запрос к модели

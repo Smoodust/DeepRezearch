@@ -1,6 +1,8 @@
 import asyncio
 import re
 import time
+from datetime import datetime
+
 from typing import Optional, cast
 
 import aiohttp
@@ -10,31 +12,41 @@ from langchain.chat_models import init_chat_model
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-from core.state import (RawDocument, SearchedDocument,
-                        SearchQueriesStructureOutput, SearchWorkflowState)
+from core.state import (
+    RawDocument,
+    SearchedDocument,
+    SearchQueriesStructureOutput,
+    SearchWorkflowState,
+)
 
 from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
-from .prompts import (SITE_INFO_EXTRACTION_TEMPALTE, get_current_date,
-                      query_writer_instructions)
 
 options = ConversionOptions()
 options.extract_metadata = False
 options.autolinks = False
 
 
+
 class ResearchAgent(BaseAgent):
     def __init__(self, model_name: str, max_result: int, n_queries: int):
+
+        super().__init__()
+
         self.model_name = model_name
         self.model = init_chat_model(model_name, model_provider="ollama")
         self.model_search_queries = self.model.with_structured_output(
             SearchQueriesStructureOutput
         )
+
         self.n_queries = n_queries
         self.max_result = max_result
+
         self.user_agent = {
             "User-Agent": "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
         }
-        self._compiled_graph = None
+
+        self._query_writer_tpl = None
+        self._site_info_tpl = None
 
         logger.info(
             f"[{self.name}] 🔧 Agent initialize with {model_name}, max_result={max_result}"
@@ -57,12 +69,23 @@ class ResearchAgent(BaseAgent):
         """
         return purpose
 
+    # Get current date in a readable format
+    @staticmethod
+    def get_current_date():
+        return datetime.now().strftime("%B %d, %Y")
+
     async def create_search_queries(self, state: SearchWorkflowState):
-        context = query_writer_instructions.format(
+        if self._query_writer_tpl is None:
+            self._query_writer_tpl = self._load_template(
+                "research_agent/QUERY_WRITER.jinja"
+            )
+        
+        context = self._query_writer_tpl.render(
             number_queries=self.n_queries,
-            current_date=get_current_date(),
+            current_date=self.get_current_date(),
             research_topic=state["workflow_input"],
         )
+
         try:
             response: SearchQueriesStructureOutput = await self.model_search_queries.ainvoke(context)  # type: ignore
             logger.info(
@@ -148,7 +171,13 @@ class ResearchAgent(BaseAgent):
         return state
 
     async def extract_text_from_search(self, state: SearchWorkflowState):
+        if self._site_info_tpl is None:
+            self._site_info_tpl = self._load_template(
+                "research_agent/SITE_INFO_INSTRUCTIONS.jinja"
+            )
+
         contexts = []
+
         for doc in state["sources"]:
             url = doc["url"]
             logger.info(f"[{self.name}] 🧠 Starting to extract information from: {url}")
@@ -156,7 +185,9 @@ class ResearchAgent(BaseAgent):
             try:
                 markdown = convert(doc["source"], options)
                 markdown = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", markdown)
-                contexts.append(SITE_INFO_EXTRACTION_TEMPALTE.format(markdown=markdown))
+                contexts.append(
+                    self._site_info_tpl.render(markdown=markdown, source_url=doc["url"])
+                )
 
             except Exception as e:
                 logger.error(
