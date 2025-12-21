@@ -12,15 +12,23 @@ from agents.base_agent import BaseAgent
 from agents.synthesis_agent import SynthesisAgent, SynthesisAgentState
 
 
-class OrchestratorDecision(BaseModel):
+class OrchestratorTypeDecision(BaseModel):
     """Model for orchestrator routing decision"""
 
     thinking: str = Field(description="Reasoning behind the decision")
     workflow_type: str = Field(description="Type of workflow")
+    confidence: float = Field(description="Confidence score from 0 to 1")
+
+class OrchestratorInputDecision(BaseModel):
+    """Model for orchestrator routing decision"""
+
+    thinking: str = Field(description="Reasoning behind the decision")
     workflow_input: str = Field(
         description="Command or request that this workflow should do"
     )
-    confidence: float = Field(description="Confidence score from 0 to 1")
+    context: str = Field(
+        description="Context that model should know"
+    )
 
 
 class OrchestratorState(TypedDict):
@@ -38,7 +46,8 @@ class WorkflowOrchestrator:
         templates_dir: str | None = "prompts/orchestrator",
     ):
         self.base_model = init_chat_model(model_name, model_provider="ollama")
-        self.model = self.base_model.with_structured_output(OrchestratorDecision)
+        self.model_workflow_type = self.base_model.with_structured_output(OrchestratorTypeDecision)
+        self.model_workflow_input = self.base_model.with_structured_output(OrchestratorInputDecision)
         self.workflows: Dict[str, BaseAgent] = {}
 
         self.template_dir = templates_dir
@@ -50,25 +59,15 @@ class WorkflowOrchestrator:
                 lstrip_blocks=True,
             )
         else:
-            self.jinja_env = None
+            raise Exception("There is no prompts folder")
 
-        self._system_template = None
-        self._analysis_template = None
-        self._decision_schema = None
+        self._workflow_type_template = None
+        self._workflow_type_user_template = None
+        self._workflow_input_template = None
 
     def register_workflow(self, workflow: BaseAgent):
         """Register a workflow with the orchestrator"""
         self.workflows[workflow.name] = workflow
-
-    def _load_template(self, name: str, default: str) -> Template:
-        if self.jinja_env:
-            try:
-                return self.jinja_env.get_template(name)
-            except Exception:
-                logger.warning(
-                    f"Template {name} not found in {self.templates_dir}, using default."
-                )
-        return Template(default)
 
     @property
     def system_prompt(self) -> str:
@@ -79,62 +78,23 @@ class WorkflowOrchestrator:
 
         workflow_variants = "|".join([x for x in self.workflows.keys()])
 
-        if self._system_template is None:
-            default_system = """<DEFAULT SYSTEM PROMPT FALLBACK - you can replace with file prompts/orchestrator/system_prompt.j2>"""
-            self._system_template = self._load_template(
-                "SYSTEM_PROMPT.jinja", default_system
-            )
+        if self._workflow_type_template is None:
+            self._workflow_type_template = self.jinja_env.get_template("WORKFLOW_TYPE_PROMPT.jinja")
 
-        if self._decision_schema is None:
-            default_schema = '{"thinking": "{{ thinking_placeholder }}","workflow_type": "{{ workflow_variants }}","workflow_input": "{{ workflow_input_placeholder }}","confidence": {{ confidence_placeholder }}}'
-            self._decision_schema = self._load_template(
-                "DECISION_SCHEMA.jinja", default_schema
-            )
-
-        decision_schema_rendered = self._decision_schema.render(
-            thinking_placeholder="{{thinking}}",
-            workflow_variants=workflow_variants,
-            workflow_input_placeholder="{{workflow_input}}",
-            confidence_placeholder="{{confidence}}",
-        )
-
-        rendered = self._system_template.render(
+        rendered = self._workflow_type_template.render(
             workflows_list=workflows_list,
-            workflow_variants=workflow_variants,
-            decision_schema=decision_schema_rendered,
+            workflow_variants=workflow_variants
         )
         return rendered
 
-    def render_analysis_prompt(
-        self, user_input: str, history_messages: list[BaseMessage]
-    ):
-        agent_outputs = [
-            m.content for m in history_messages if isinstance(m, AIMessage)
-        ]
-        history_summary = ""
-        if agent_outputs:
-            formatted = []
-            for out in agent_outputs:
-                if len(out) > 500:
-                    formatted.append(f"• {out[:500]}...")
-                else:
-                    formatted.append(f"• {out}")
-            history_summary = "\n".join(formatted)
+    async def decide_workflow_type(self, state: OrchestratorState) -> OrchestratorState:
+        """Analyze the request and make routing decision"""
 
         if self._analysis_template is None:
-            default_analysis = "USER ORIGINAL REQUEST: {{ user_input }}\n\n{% if history_summary %}PREVIOUS AGENT OUTPUTS:\n{{ history_summary }}\n{% endif %}\nBased on the user request and any previous agent outputs, decide what should happen next.\n\nThink step by step and return ONLY JSON:\n"
-            self._analysis_template = self._load_template(
-                "ANALYSIS_PROMPT.jinja", default_analysis
-            )
+            self._analysis_template = self.jinja_env.get_template("ANALYSIS_PROMPT.jinja")
 
-        return self._analysis_template.render(
-            user_input=user_input, history_summary=history_summary
-        )
-
-    async def analyze_request(self, state: OrchestratorState) -> OrchestratorState:
-        """Analyze the request and make routing decision"""
-        analysis_prompt = self.render_analysis_prompt(
-            state["user_input"], state["messages"]
+        analysis_prompt = self._analysis_template.render(
+            user_input=state["user_input"]
         )
 
         try:
@@ -147,7 +107,7 @@ class WorkflowOrchestrator:
                 SystemMessage(content=analysis_prompt),
             ]
 
-            decision_data = await self.model.ainvoke(request_messages)
+            decision_data: OrchestratorTypeDecision = await self.model_workflow_type.ainvoke(request_messages) #type: ignore
 
             logger.success(
                 f"[orchestrator] made decision: {decision_data.workflow_type} with confidence {decision_data.confidence}"
@@ -156,10 +116,9 @@ class WorkflowOrchestrator:
 
         except Exception as e:
             logger.error(f"Analysis error: {repr(e)}")
-            decision_data = OrchestratorDecision(
+            decision_data = OrchestratorTypeDecision(
                 thinking=f"Analysis error: {str(e)}",
                 workflow_type="synthesis",
-                workflow_input="Synthesize the information gathered so far",
                 confidence=0.5,
             )
 
@@ -170,7 +129,51 @@ class WorkflowOrchestrator:
             "user_input": state["user_input"],
             "messages": state["messages"] + [decision_message],
             "last_judged_workflow_type": decision_data.workflow_type,
-            "last_judged_workflow_input": decision_data.workflow_input,
+            "last_judged_workflow_input": "",
+        }
+
+    async def decide_workflow_input(self, state: OrchestratorState) -> OrchestratorState:
+        """Analyze the request and make routing decision"""
+        if self._workflow_input_template is None:
+            self._workflow_input_template = self.jinja_env.get_template("WORKFLOW_INPUT_PROMPT.jinja")
+
+        current_agent: BaseAgent = self.workflows[state["last_judged_workflow_type"]]
+
+        analysis_prompt = self._workflow_input_template.render(
+            user_input=state["user_input"], chosen_workflow=state["last_judged_workflow_type"], agent_specific_info=current_agent.additional_input_prompt, example_output=current_agent.examples_input_prompt
+        )
+        try:
+            # Формируем запрос к модели
+            request_messages = [
+                # Добавляем историю сообщений
+                *state["messages"],
+                # Добавляем новый промпт для анализа
+                SystemMessage(content=analysis_prompt),
+            ]
+
+            decision_data: OrchestratorInputDecision = await self.model_workflow_input.ainvoke(request_messages) #type: ignore
+
+            logger.success(
+                f"[orchestrator] made wrote input for agent: {decision_data.workflow_input[:100]}... with context {decision_data.context[:100]}..."
+            )
+            logger.info(f"Decision thinking: {decision_data.thinking}")
+
+        except Exception as e:
+            logger.error(f"Analysis error: {repr(e)}")
+            decision_data = OrchestratorInputDecision(
+                thinking=f"Analysis error: {str(e)}",
+                workflow_input="Synthesize the information gathered so far",
+                context="synthesis",
+            )
+
+        # Сохраняем решение в истории сообщений
+        decision_message = AIMessage(decision_data.model_dump_json(indent=4))
+
+        return {
+            "user_input": state["user_input"],
+            "messages": state["messages"] + [decision_message],
+            "last_judged_workflow_type": state["last_judged_workflow_type"],
+            "last_judged_workflow_input": "Context: "+decision_data.context+"\n\n"+decision_data.workflow_input,
         }
 
     @logger.catch
@@ -201,7 +204,8 @@ class WorkflowOrchestrator:
             iteration += 1
             logger.info(f"[orchestrator] Iteration {iteration}")
 
-            state = await self.analyze_request(state)
+            state = await self.decide_workflow_type(state)
+            state = await self.decide_workflow_input(state)
             current_workflow_type = state["last_judged_workflow_type"]
 
             # Проверяем, не запрашивает ли orchestrator synthesis

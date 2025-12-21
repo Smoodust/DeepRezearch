@@ -68,6 +68,31 @@ class CodingAgent(BaseAgent):
         Use when: Task requires computation, data manipulation, or algorithmic processing
         """
         return purpose
+    
+    @property
+    def additional_input_prompt(self) -> str:
+        return """workflow_input: MUST be a specific, executable Python task. Include:
+- Clear objective: "Calculate...", "Process...", "Generate..."
+- Required outputs: "Return...", "Print...", "Save..."
+- Any constraints: "Use only standard libraries", "Optimize for..."
+- Error handling expectations: "Validate input...", "Handle edge cases..."
+
+context: Include:
+- Mathematical formulas or algorithms if provided
+- Sample inputs/outputs if given
+- Data structures/format requirements
+- Success criteria: "The answer should be...\""""
+    
+    @property
+    def examples_input_prompt(self) -> str:
+        return """For PYTHON_EXECUTOR (User: "Calculate compound interest for $1000 at 5% for 10 years"):
+```json
+{
+    "thinking": "PYTHON_EXECUTOR needs the mathematical formula and specific parameters to write the calculation script",
+    "workflow_input": "Write and execute a Python script that calculates compound interest using the formula A = P(1 + r/n)^(nt). The script should accept principal, rate, time, and compounding frequency as inputs and output the final amount.",
+    "context": "Principal: $1000, Annual rate: 5% (0.05), Time: 10 years, Compounding: annually (n=1). The answer should include both the formula explanation and the calculated result."
+}
+```"""
 
     def _create_generation_agent(self):
         model = ChatOllama(
@@ -294,6 +319,7 @@ class CodingAgent(BaseAgent):
             f"[{self.name}] ✅ The workflow graph has been successfully built"
         )
         return builder
+    
 
     async def run(self, state: BaseAgentState) -> BaseAgentOutput:
         uid = uuid.uuid4().hex[:12]

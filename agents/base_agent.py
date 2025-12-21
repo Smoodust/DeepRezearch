@@ -1,6 +1,6 @@
 import os
 from abc import ABC, abstractmethod
-from typing import TypedDict
+from typing import TypedDict, Protocol
 
 from jinja2 import (Environment, FileSystemLoader, Template, TemplateNotFound,
                     select_autoescape)
@@ -14,6 +14,8 @@ class BaseAgentState(TypedDict):
 
 class BaseAgentOutput(TypedDict):
     output: str
+
+class 
 
 
 class BaseAgent(ABC):
@@ -38,12 +40,24 @@ class BaseAgent(ABC):
     def build_graph(self) -> StateGraph:
         pass
 
+    @abstractmethod
+    def construct_context(self, messages) -> BaseAgentState:
+        pass
+
     @property
     def name(self) -> str:
         raise NotImplementedError()
 
     @property
     def purpose(self) -> str:
+        raise NotImplementedError()
+    
+    @property
+    def additional_input_prompt(self) -> str:
+        raise NotImplementedError()
+    
+    @property
+    def examples_input_prompt(self) -> str:
         raise NotImplementedError()
 
     @property

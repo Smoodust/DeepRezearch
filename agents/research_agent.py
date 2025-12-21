@@ -65,6 +65,31 @@ class ResearchAgent(BaseAgent):
         Use when: Task requires current information, research, or data not in training set
         """
         return purpose
+    
+    @property
+    def additional_input_prompt(self) -> str:
+        return """workflow_input: MUST be a focused research query. Include:
+- Specific questions to answer: "Find...", "Research..."
+- Required information types: "Statistics...", "Current events...", "Scientific studies..."
+- Scope constraints: "Focus on...", "Exclude..."
+- Output requirements: "Summarize...", "Compare..."
+
+context: Include:
+- User's original question
+- Any known facts to verify/expand upon
+- Timeframe requirements: "Current as of...", "Historical..."
+- Credibility requirements: "Peer-reviewed sources...", "Official data...\""""
+    
+    @property
+    def examples_input_prompt(self) -> str:
+        return """For WEB_RESEARCHER (User: "What's the latest SpaceX launch?"):
+```json
+{
+    "thinking": "WEB_RESEARCHER needs a clear search query focused on recent SpaceX activities",
+    "workflow_input": "Research the most recent SpaceX rocket launch. Find details including: mission name, launch date, payload, launch site, and mission outcome. Also check for upcoming scheduled launches.",
+    "context": "User wants current information about SpaceX launches. Focus on reliable space news sources and official SpaceX communications. Information should be from the past 30 days."
+}
+```"""
 
     # Get current date in a readable format
     @staticmethod
@@ -232,8 +257,8 @@ class ResearchAgent(BaseAgent):
             )
 
         documents = [{"id": id+1, "url": x["url"], "text": x["extracted_info"]} for id, x in enumerate(state["searched_documents"])]
-        prompt_docs = [{"id": x["text"], "text": x["text"]} for x in documents]
-        prompt = self._final_summary_tpl.render(docs=json.dumps(prompt_docs, indent=4), workflow_input=state["workflow_input"])
+        prompt_docs = [{"id": x["id"], "text": x["text"]} for x in documents]
+        prompt = self._final_summary_tpl.render(documents=json.dumps(prompt_docs, indent=4), workflow_input=state["workflow_input"])
         summary: str = (await self.model.ainvoke(prompt)).content #type: ignore
 
         return {

@@ -58,6 +58,29 @@ Capabilities:
 - Combining research findings with computational result
 - Handling conversational greetings and informal queries"""
         return purpose
+    
+    @property
+    def additional_input_prompt(self) -> str:
+        return """workflow_input: MUST be a synthesis instruction. Include:
+- Desired output format: "Create a report...", "Write a summary..."
+- Audience considerations: "Explain for beginners...", "Technical details..."
+- Length/style preferences: "Concise...", "Detailed..."
+
+context: MUST include ALL relevant information from previous agents:
+- ALL relevant agent outputs (this is CRITICAL for synthesis)
+- Original user request
+- Any specific formatting requirements"""
+    
+    @property
+    def examples_input_prompt(self) -> str:
+        return """For RESPONSE_SYNTHESIZER (After previous agents have provided data):
+```json
+{
+    "thinking": "RESPONSE_SYNTHESIZER needs all previous outputs plus the original request to create a cohesive answer",
+    "workflow_input": "Synthesize the provided information into a clear, well-structured response for the user. Organize the information logically and maintain a professional tone.",
+    "context": "Original user request: 'What's the latest SpaceX launch?' PYTHON_EXECUTOR output: 'N/A - Not used'. WEB_RESEARCHER output: 'Latest launch: Starlink Group 6-59 on December 15, 2024 from Cape Canaveral, carrying 23 Starlink satellites. Next launch: December 20, 2024 for Starlink Group 7-10.'"
+}
+```"""
 
     async def synthesis(self, state: SynthesisAgentState) -> BaseAgentOutput:
         if self._system_prompt is None:

@@ -38,9 +38,7 @@ Your Output:
 ---
 
 Begin.
-Documents: [{% for doc in documents %}
-{{ doc.id }}] - {{ doc.url }}
-{% endfor %}]
+Documents: {{ documents }}
 User Query: {{ workflow_input }}
 
 Now, generate your summary based on the rules above.
