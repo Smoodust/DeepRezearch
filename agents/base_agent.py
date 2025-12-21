@@ -15,8 +15,6 @@ class BaseAgentState(TypedDict):
 class BaseAgentOutput(TypedDict):
     output: str
 
-class 
-
 
 class BaseAgent(ABC):
     def __init__(
