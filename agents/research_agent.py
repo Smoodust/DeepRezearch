@@ -12,8 +12,12 @@ from langchain.chat_models import init_chat_model
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-from core.state import (RawDocument, SearchedDocument,
-                        SearchQueriesStructureOutput, SearchWorkflowState)
+from core.state import (
+    RawDocument,
+    SearchedDocument,
+    SearchQueriesStructureOutput,
+    SearchWorkflowState,
+)
 
 from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
 
@@ -237,18 +241,26 @@ class ResearchAgent(BaseAgent):
             {"id": id + 1, "url": x["url"], "text": x["extracted_info"]}
             for id, x in enumerate(state["searched_documents"])
         ]
-        prompt_docs = [{"id": x["text"], "text": x["text"]} for x in documents]
+        prompt_docs = [{"id": x["id"], "text": x["text"]} for x in documents]
         prompt = self._final_summary_tpl.render(
-            docs=json.dumps(prompt_docs, indent=4),
+            documents=json.dumps(prompt_docs, indent=4),
             workflow_input=state["workflow_input"],
         )
-        summary: str = (await self.model.ainvoke(prompt)).content  # type: ignore
 
-        return {
+        logger.info(prompt)
+
+        summary: str = (await self.model.ainvoke(prompt)).content  # type: ignore
+        logger.success(f"RESEARCHER OUTPUT:\n{summary}")
+
+        output = {
             "output": self._final_answer_tpl.render(
                 summary=summary, documents=documents
             )
         }
+
+        logger.success(output)
+
+        return output 
 
     def build_graph(self) -> StateGraph:
         try:
