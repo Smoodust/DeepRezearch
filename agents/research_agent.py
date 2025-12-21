@@ -1,4 +1,5 @@
 import asyncio
+import json
 import re
 import time
 from datetime import datetime
@@ -41,6 +42,8 @@ class ResearchAgent(BaseAgent):
 
         self._query_writer_tpl = None
         self._site_info_tpl = None
+        self._final_summary_tpl = None
+        self._final_answer_tpl = None
 
         logger.info(
             f"[{self.name}] 🔧 Agent initialize with {model_name}, max_result={max_result}"
@@ -180,7 +183,7 @@ class ResearchAgent(BaseAgent):
                 markdown = convert(doc["source"], options)
                 markdown = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", markdown)
                 contexts.append(
-                    self._site_info_tpl.render(markdown=markdown, source_url=doc["url"])
+                    self._site_info_tpl.render(markdown=markdown, workflow_input=state["workflow_input"])
                 )
 
             except Exception as e:
@@ -217,11 +220,24 @@ class ResearchAgent(BaseAgent):
             logger.error(f"[{self.name}] ❌ Error during information extraction: {e}")
             return {"searched_documents": []}
 
-    def transform_to_output(self, state: SearchWorkflowState) -> BaseAgentOutput:
-        return {
-            "output": "\n\n".join(
-                [x["extracted_info"] for x in state["searched_documents"]]
+    async def summary_to_output(self, state: SearchWorkflowState) -> BaseAgentOutput:
+        if self._final_summary_tpl is None:
+            self._final_summary_tpl = self._load_template(
+                "research_agent/FINAL_SUMMARY_PROMPT.jinja"
             )
+        
+        if self._final_answer_tpl is None:
+            self._final_answer_tpl = self._load_template(
+                "research_agent/FINAL_ANSWER_TEMPLATE.jinja"
+            )
+
+        documents = [{"id": id+1, "url": x["url"], "text": x["extracted_info"]} for id, x in enumerate(state["searched_documents"])]
+        prompt_docs = [{"id": x["text"], "text": x["text"]} for x in documents]
+        prompt = self._final_summary_tpl.render(docs=json.dumps(prompt_docs, indent=4), workflow_input=state["workflow_input"])
+        summary: str = (await self.model.ainvoke(prompt)).content #type: ignore
+
+        return {
+            "output": self._final_answer_tpl.render(summary=summary, documents=documents)
         }
 
     def build_graph(self) -> StateGraph:
@@ -235,7 +251,7 @@ class ResearchAgent(BaseAgent):
             builder.add_node("create_search_queries", self.create_search_queries)
             builder.add_node("searching", self.searching)
             builder.add_node("extract_info", self.extract_text_from_search)
-            builder.add_node("transform_to_output", self.transform_to_output)
+            builder.add_node("summary_to_output", self.summary_to_output)
 
             builder.set_entry_point("create_search_queries")
 
@@ -243,8 +259,8 @@ class ResearchAgent(BaseAgent):
 
             builder.add_edge("searching", "extract_info")
 
-            builder.add_edge("extract_info", "transform_to_output")
-            builder.add_edge("transform_to_output", END)
+            builder.add_edge("extract_info", "summary_to_output")
+            builder.add_edge("summary_to_output", END)
 
             logger.success(
                 f"[{self.name}] ✅ The workflow graph has been successfully built"
