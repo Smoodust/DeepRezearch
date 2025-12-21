@@ -183,7 +183,9 @@ class ResearchAgent(BaseAgent):
                 markdown = convert(doc["source"], options)
                 markdown = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", markdown)
                 contexts.append(
-                    self._site_info_tpl.render(markdown=markdown, workflow_input=state["workflow_input"])
+                    self._site_info_tpl.render(
+                        markdown=markdown, workflow_input=state["workflow_input"]
+                    )
                 )
 
             except Exception as e:
@@ -225,19 +227,27 @@ class ResearchAgent(BaseAgent):
             self._final_summary_tpl = self._load_template(
                 "research_agent/FINAL_SUMMARY_PROMPT.jinja"
             )
-        
+
         if self._final_answer_tpl is None:
             self._final_answer_tpl = self._load_template(
                 "research_agent/FINAL_ANSWER_TEMPLATE.jinja"
             )
 
-        documents = [{"id": id+1, "url": x["url"], "text": x["extracted_info"]} for id, x in enumerate(state["searched_documents"])]
+        documents = [
+            {"id": id + 1, "url": x["url"], "text": x["extracted_info"]}
+            for id, x in enumerate(state["searched_documents"])
+        ]
         prompt_docs = [{"id": x["text"], "text": x["text"]} for x in documents]
-        prompt = self._final_summary_tpl.render(docs=json.dumps(prompt_docs, indent=4), workflow_input=state["workflow_input"])
-        summary: str = (await self.model.ainvoke(prompt)).content #type: ignore
+        prompt = self._final_summary_tpl.render(
+            docs=json.dumps(prompt_docs, indent=4),
+            workflow_input=state["workflow_input"],
+        )
+        summary: str = (await self.model.ainvoke(prompt)).content  # type: ignore
 
         return {
-            "output": self._final_answer_tpl.render(summary=summary, documents=documents)
+            "output": self._final_answer_tpl.render(
+                summary=summary, documents=documents
+            )
         }
 
     def build_graph(self) -> StateGraph:
