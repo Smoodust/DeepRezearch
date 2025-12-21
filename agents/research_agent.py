@@ -65,7 +65,7 @@ class ResearchAgent(BaseAgent):
         Use when: Task requires current information, research, or data not in training set
         """
         return purpose
-    
+
     @property
     def additional_input_prompt(self) -> str:
         return """workflow_input: MUST be a focused research query. Include:
@@ -79,7 +79,7 @@ context: Include:
 - Any known facts to verify/expand upon
 - Timeframe requirements: "Current as of...", "Historical..."
 - Credibility requirements: "Peer-reviewed sources...", "Official data...\""""
-    
+
     @property
     def examples_input_prompt(self) -> str:
         return """For WEB_RESEARCHER (User: "What's the latest SpaceX launch?"):

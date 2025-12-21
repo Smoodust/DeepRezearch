@@ -68,7 +68,7 @@ class CodingAgent(BaseAgent):
         Use when: Task requires computation, data manipulation, or algorithmic processing
         """
         return purpose
-    
+
     @property
     def additional_input_prompt(self) -> str:
         return """workflow_input: MUST be a specific, executable Python task. Include:
@@ -82,7 +82,7 @@ context: Include:
 - Sample inputs/outputs if given
 - Data structures/format requirements
 - Success criteria: "The answer should be...\""""
-    
+
     @property
     def examples_input_prompt(self) -> str:
         return """For PYTHON_EXECUTOR (User: "Calculate compound interest for $1000 at 5% for 10 years"):
@@ -319,7 +319,6 @@ context: Include:
             f"[{self.name}] ✅ The workflow graph has been successfully built"
         )
         return builder
-    
 
     async def run(self, state: BaseAgentState) -> BaseAgentOutput:
         uid = uuid.uuid4().hex[:12]

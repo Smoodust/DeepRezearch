@@ -58,7 +58,7 @@ Capabilities:
 - Combining research findings with computational result
 - Handling conversational greetings and informal queries"""
         return purpose
-    
+
     @property
     def additional_input_prompt(self) -> str:
         return """workflow_input: MUST be a synthesis instruction. Include:
@@ -70,7 +70,7 @@ context: MUST include ALL relevant information from previous agents:
 - ALL relevant agent outputs (this is CRITICAL for synthesis)
 - Original user request
 - Any specific formatting requirements"""
-    
+
     @property
     def examples_input_prompt(self) -> str:
         return """For RESPONSE_SYNTHESIZER (After previous agents have provided data):

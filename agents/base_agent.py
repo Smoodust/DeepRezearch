@@ -1,6 +1,6 @@
 import os
 from abc import ABC, abstractmethod
-from typing import TypedDict, Protocol
+from typing import TypedDict
 
 from jinja2 import (Environment, FileSystemLoader, Template, TemplateNotFound,
                     select_autoescape)
@@ -49,11 +49,11 @@ class BaseAgent(ABC):
     @property
     def purpose(self) -> str:
         raise NotImplementedError()
-    
+
     @property
     def additional_input_prompt(self) -> str:
         raise NotImplementedError()
-    
+
     @property
     def examples_input_prompt(self) -> str:
         raise NotImplementedError()
