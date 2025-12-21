@@ -1,7 +1,7 @@
-from typing import Annotated, Dict, TypedDict, cast
-from jinja2 import Environment, FileSystemLoader, select_autoescape, Template
 import os
+from typing import Annotated, Dict, TypedDict, cast
 
+from jinja2 import Environment, FileSystemLoader, Template, select_autoescape
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.graph.message import BaseMessage, add_messages
@@ -133,7 +133,9 @@ class WorkflowOrchestrator:
 
     async def analyze_request(self, state: OrchestratorState) -> OrchestratorState:
         """Analyze the request and make routing decision"""
-        analysis_prompt = self.render_analysis_prompt(state["user_input"], state["messages"])
+        analysis_prompt = self.render_analysis_prompt(
+            state["user_input"], state["messages"]
+        )
 
         try:
             # Формируем запрос к модели

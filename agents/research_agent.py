@@ -2,7 +2,6 @@ import asyncio
 import re
 import time
 from datetime import datetime
-
 from typing import Optional, cast
 
 import aiohttp
@@ -12,19 +11,14 @@ from langchain.chat_models import init_chat_model
 from langgraph.graph import END, StateGraph
 from loguru import logger
 
-from core.state import (
-    RawDocument,
-    SearchedDocument,
-    SearchQueriesStructureOutput,
-    SearchWorkflowState,
-)
+from core.state import (RawDocument, SearchedDocument,
+                        SearchQueriesStructureOutput, SearchWorkflowState)
 
 from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
 
 options = ConversionOptions()
 options.extract_metadata = False
 options.autolinks = False
-
 
 
 class ResearchAgent(BaseAgent):
@@ -79,7 +73,7 @@ class ResearchAgent(BaseAgent):
             self._query_writer_tpl = self._load_template(
                 "research_agent/QUERY_WRITER.jinja"
             )
-        
+
         context = self._query_writer_tpl.render(
             number_queries=self.n_queries,
             current_date=self.get_current_date(),

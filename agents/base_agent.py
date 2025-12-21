@@ -1,11 +1,10 @@
+import os
 from abc import ABC, abstractmethod
 from typing import TypedDict
-import os
-from pathlib import Path
-from jinja2 import Environment, FileSystemLoader, select_autoescape, Template, TemplateNotFound
 
+from jinja2 import (Environment, FileSystemLoader, Template, TemplateNotFound,
+                    select_autoescape)
 from langgraph.graph import StateGraph
-
 from loguru import logger
 
 
@@ -23,7 +22,7 @@ class BaseAgent(ABC):
         templates_dir: str | None = "prompts",
     ):
         self._compiled_graph = None
-        
+
         self.template_dir = templates_dir
         if templates_dir and os.path.isdir(templates_dir):
             self.jinja_env = Environment(
@@ -62,7 +61,7 @@ class BaseAgent(ABC):
         except TemplateNotFound:
             logger.error(f"Template NOT FOUND: {name}")
             raise
-        except Exception as e:
+        except Exception:
             logger.exception(f"Template FOUND but FAILED to load: {name}")
             raise
 
