@@ -54,7 +54,7 @@ class CodingAgent(BaseAgent):
 
     @property
     def name(self):
-        return "PYTHON_EXECUTOR - 'The Computational Engine'"
+        return "PYTHON_EXECUTOR"
 
     @property
     def purpose(self):

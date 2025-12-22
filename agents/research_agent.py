@@ -51,7 +51,7 @@ class ResearchAgent(BaseAgent):
 
     @property
     def name(self):
-        return "WEB_RESEARCHER - 'The Knowledge Retrieval System'"
+        return "WEB_RESEARCHER"
 
     @property
     def purpose(self):
