@@ -77,7 +77,7 @@ class CodingAgent(BaseAgent):
 - Any constraints: "Use only standard libraries", "Optimize for..."
 - Error handling expectations: "Validate input...", "Handle edge cases..."
 
-context: Include:
+context: Include UUIDs containing with:
 - Mathematical formulas or algorithms if provided
 - Sample inputs/outputs if given
 - Data structures/format requirements

@@ -74,7 +74,7 @@ class ResearchAgent(BaseAgent):
 - Scope constraints: "Focus on...", "Exclude..."
 - Output requirements: "Summarize...", "Compare..."
 
-context: Include:
+context: Include UUIDs containing with:
 - User's original question
 - Any known facts to verify/expand upon
 - Timeframe requirements: "Current as of...", "Historical..."

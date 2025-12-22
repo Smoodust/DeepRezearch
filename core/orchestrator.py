@@ -1,10 +1,11 @@
+import json
 import os
 from typing import Annotated, Dict, TypedDict, cast
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, SystemMessage
-from langgraph.graph.message import BaseMessage, add_messages
+from langgraph.graph.message import BaseMessage
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -27,7 +28,7 @@ class OrchestratorInputDecision(BaseModel):
     workflow_input: str = Field(
         description="Command or request that this workflow should do"
     )
-    context: str = Field(description="Context that model should know")
+    context: list[int] = Field(description="List of ids messages that would be put into context")
 
 
 class OrchestratorState(TypedDict):
@@ -35,7 +36,8 @@ class OrchestratorState(TypedDict):
 
     last_judged_workflow_type: str
     last_judged_workflow_input: str
-    messages: Annotated[list[BaseMessage], add_messages]
+    last_judged_workflow_context: list[int]
+    messages: list[BaseMessage]
 
 
 class WorkflowOrchestrator:
@@ -135,6 +137,7 @@ class WorkflowOrchestrator:
             "messages": state["messages"] + [decision_message],
             "last_judged_workflow_type": decision_data.workflow_type,
             "last_judged_workflow_input": "",
+            "last_judged_workflow_context": []
         }
 
     async def decide_workflow_input(
@@ -169,12 +172,19 @@ class WorkflowOrchestrator:
             )
             logger.info(f"Context: {decision_data.context}")
 
+            result_ids = []
+            for ids in decision_data.context:
+                if ids >= 0 and ids < len(state["messages"]):
+                    result_ids.append(ids)
+            decision_data.context = result_ids
+            logger.info(f"Cleaned context: {decision_data.context}")
+
         except Exception as e:
             logger.error(f"Analysis error: {repr(e)}")
             decision_data = OrchestratorInputDecision(
                 thinking=f"Analysis error: {str(e)}",
                 workflow_input="Synthesize the information gathered so far",
-                context="synthesis",
+                context=[],
             )
 
         # Сохраняем решение в истории сообщений
@@ -184,10 +194,8 @@ class WorkflowOrchestrator:
             "user_input": state["user_input"],
             "messages": state["messages"] + [decision_message],
             "last_judged_workflow_type": state["last_judged_workflow_type"],
-            "last_judged_workflow_input": "Context: "
-            + decision_data.context
-            + "\n\n"
-            + decision_data.workflow_input,
+            "last_judged_workflow_input": decision_data.workflow_input,
+            "last_judged_workflow_context": decision_data.context
         }
 
     @logger.catch
@@ -208,7 +216,8 @@ class WorkflowOrchestrator:
             "user_input": user_input,
             "last_judged_workflow_type": "",
             "last_judged_workflow_input": "",
-            "messages": [],
+            "last_judged_workflow_context": [],
+            "messages": []
         }
 
         max_iterations = 5  # Защита от бесконечного цикла
@@ -245,14 +254,21 @@ class WorkflowOrchestrator:
             )
 
             try:
+                workflow_input = "Context:\n"+"\n".join([state["messages"][ids].content for ids in state["last_judged_workflow_context"]]) #type: ignore
+                workflow_input += "\nUser Input: "+state["last_judged_workflow_input"]
                 workflow_output = await self.workflows[current_workflow_type].run(
-                    {"workflow_input": state["last_judged_workflow_input"]}
+                    {"workflow_input": workflow_input}
                 )
 
                 # Сохраняем вывод агента в историю
                 agent_output = workflow_output.get("output", "No output from agent")
+                agent_message_id = len(state["messages"])
                 state["messages"].append(
-                    AIMessage(f"Agent {current_workflow_type} output:\n{agent_output}")
+                    AIMessage(json.dumps({
+                        "id": agent_message_id,
+                        "from": current_workflow_type,
+                        "output": agent_output
+                    }, indent=4))
                 )
                 logger.info(
                     f"[orchestrator] Agent {current_workflow_type} completed successfully"

@@ -66,7 +66,7 @@ Capabilities:
 - Audience considerations: "Explain for beginners...", "Technical details..."
 - Length/style preferences: "Concise...", "Detailed..."
 
-context: MUST include ALL relevant information from previous agents:
+context: MUST include ALL UUIDs with relevant information from previous agents:
 - ALL relevant agent outputs (this is CRITICAL for synthesis)
 - Original user request
 - Any specific formatting requirements"""
