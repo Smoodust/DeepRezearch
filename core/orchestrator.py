@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Annotated, Dict, TypedDict, cast
+from typing import Dict, TypedDict, cast
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from langchain.chat_models import init_chat_model
@@ -28,7 +28,9 @@ class OrchestratorInputDecision(BaseModel):
     workflow_input: str = Field(
         description="Command or request that this workflow should do"
     )
-    context: list[int] = Field(description="List of ids messages that would be put into context")
+    context: list[int] = Field(
+        description="List of ids messages that would be put into context"
+    )
 
 
 class OrchestratorState(TypedDict):
@@ -137,7 +139,7 @@ class WorkflowOrchestrator:
             "messages": state["messages"] + [decision_message],
             "last_judged_workflow_type": decision_data.workflow_type,
             "last_judged_workflow_input": "",
-            "last_judged_workflow_context": []
+            "last_judged_workflow_context": [],
         }
 
     async def decide_workflow_input(
@@ -195,7 +197,7 @@ class WorkflowOrchestrator:
             "messages": state["messages"] + [decision_message],
             "last_judged_workflow_type": state["last_judged_workflow_type"],
             "last_judged_workflow_input": decision_data.workflow_input,
-            "last_judged_workflow_context": decision_data.context
+            "last_judged_workflow_context": decision_data.context,
         }
 
     @logger.catch
@@ -217,7 +219,7 @@ class WorkflowOrchestrator:
             "last_judged_workflow_type": "",
             "last_judged_workflow_input": "",
             "last_judged_workflow_context": [],
-            "messages": []
+            "messages": [],
         }
 
         max_iterations = 5  # Защита от бесконечного цикла
@@ -254,8 +256,8 @@ class WorkflowOrchestrator:
             )
 
             try:
-                workflow_input = "Context:\n"+"\n".join([state["messages"][ids].content for ids in state["last_judged_workflow_context"]]) #type: ignore
-                workflow_input += "\nUser Input: "+state["last_judged_workflow_input"]
+                workflow_input = "Context:\n" + "\n".join([state["messages"][ids].content for ids in state["last_judged_workflow_context"]])  # type: ignore
+                workflow_input += "\nUser Input: " + state["last_judged_workflow_input"]
                 workflow_output = await self.workflows[current_workflow_type].run(
                     {"workflow_input": workflow_input}
                 )
@@ -264,11 +266,16 @@ class WorkflowOrchestrator:
                 agent_output = workflow_output.get("output", "No output from agent")
                 agent_message_id = len(state["messages"])
                 state["messages"].append(
-                    AIMessage(json.dumps({
-                        "id": agent_message_id,
-                        "from": current_workflow_type,
-                        "output": agent_output
-                    }, indent=4))
+                    AIMessage(
+                        json.dumps(
+                            {
+                                "id": agent_message_id,
+                                "from": current_workflow_type,
+                                "output": agent_output,
+                            },
+                            indent=4,
+                        )
+                    )
                 )
                 logger.info(
                     f"[orchestrator] Agent {current_workflow_type} completed successfully"
