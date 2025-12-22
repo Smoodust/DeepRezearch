@@ -296,7 +296,10 @@ class WorkflowOrchestrator:
         )
 
         synthesis_context = "\n".join(
-            [state["messages"][ids].content for ids in state["last_judged_workflow_context"]]
+            [
+                state["messages"][ids].content
+                for ids in state["last_judged_workflow_context"]
+            ]
         )
 
         synth_state: SynthesisAgentState = {
