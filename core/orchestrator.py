@@ -154,6 +154,7 @@ class WorkflowOrchestrator:
         current_agent: BaseAgent = self.workflows[state["last_judged_workflow_type"]]
 
         analysis_prompt = self._workflow_input_template.render(
+            messages=state["messages"],
             user_input=state["user_input"],
             chosen_workflow=state["last_judged_workflow_type"],
             agent_specific_info=current_agent.additional_input_prompt,
@@ -293,8 +294,13 @@ class WorkflowOrchestrator:
         synth_agent: SynthesisAgent = cast(
             SynthesisAgent, self.workflows[synthesis_key]
         )
+
+        synthesis_context = "\n".join(
+            [state["messages"][ids].content for ids in state["last_judged_workflow_context"]]
+        )
+
         synth_state: SynthesisAgentState = {
-            "workflow_input": f"Synthesize a response to: {user_input}",
+            "workflow_input": f"Synthesize a response to: {user_input}. With context: {synthesis_context}",
             "messages": state["messages"],
         }
 
