@@ -80,17 +80,6 @@ context: Include:
 - Timeframe requirements: "Current as of...", "Historical..."
 - Credibility requirements: "Peer-reviewed sources...", "Official data...\""""
 
-    @property
-    def examples_input_prompt(self) -> str:
-        return """For WEB_RESEARCHER (User: "What's the latest SpaceX launch?"):
-```json
-{
-    "thinking": "WEB_RESEARCHER needs a clear search query focused on recent SpaceX activities",
-    "workflow_input": "Research the most recent SpaceX rocket launch. Find details including: mission name, launch date, payload, launch site, and mission outcome. Also check for upcoming scheduled launches.",
-    "context": "User wants current information about SpaceX launches. Focus on reliable space news sources and official SpaceX communications. Information should be from the past 30 days."
-}
-```"""
-
     # Get current date in a readable format
     @staticmethod
     def get_current_date():

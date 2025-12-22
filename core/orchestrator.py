@@ -150,8 +150,7 @@ class WorkflowOrchestrator:
         analysis_prompt = self._workflow_input_template.render(
             user_input=state["user_input"],
             chosen_workflow=state["last_judged_workflow_type"],
-            agent_specific_info=current_agent.additional_input_prompt,
-            example_output=current_agent.examples_input_prompt,
+            agent_specific_info=current_agent.additional_input_prompt
         )
         try:
             # Формируем запрос к модели

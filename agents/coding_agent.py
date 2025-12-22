@@ -83,17 +83,6 @@ context: Include:
 - Data structures/format requirements
 - Success criteria: "The answer should be...\""""
 
-    @property
-    def examples_input_prompt(self) -> str:
-        return """For PYTHON_EXECUTOR (User: "Calculate compound interest for $1000 at 5% for 10 years"):
-```json
-{
-    "thinking": "PYTHON_EXECUTOR needs the mathematical formula and specific parameters to write the calculation script",
-    "workflow_input": "Write and execute a Python script that calculates compound interest using the formula A = P(1 + r/n)^(nt). The script should accept principal, rate, time, and compounding frequency as inputs and output the final amount.",
-    "context": "Principal: $1000, Annual rate: 5% (0.05), Time: 10 years, Compounding: annually (n=1). The answer should include both the formula explanation and the calculated result."
-}
-```"""
-
     def _create_generation_agent(self):
         model = ChatOllama(
             model=self.model_name, format="json", temperature=0.1, num_predict=2048

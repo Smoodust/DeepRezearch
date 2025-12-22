@@ -53,11 +53,7 @@ class BaseAgent(ABC):
     @property
     def additional_input_prompt(self) -> str:
         raise NotImplementedError()
-
-    @property
-    def examples_input_prompt(self) -> str:
-        raise NotImplementedError()
-
+    
     @property
     def compiled_graph(self):
         if self._compiled_graph is None:
