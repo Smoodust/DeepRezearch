@@ -61,15 +61,12 @@ Capabilities:
 
     @property
     def additional_input_prompt(self) -> str:
-        return """workflow_input: MUST be a synthesis instruction. Include:
-- Desired output format: "Create a report...", "Write a summary..."
-- Audience considerations: "Explain for beginners...", "Technical details..."
-- Length/style preferences: "Concise...", "Detailed..."
-
-context: MUST include ALL UUIDs with relevant information from previous agents:
-- ALL relevant agent outputs (this is CRITICAL for synthesis)
-- Original user request
-- Any specific formatting requirements"""
+        return """- workflow_input: Specify synthesis requirements: "Synthesize the [information] from provided [context] into [response_format] addressing [user's_original_query]. Focus on [key_points] and structure for [audience_type]."
+- context: Include messages containing:
+  - User's original question/request (usually first message)
+  - Agent outputs with results/data (identified by their IDs)
+  - Any formatting or tone requirements
+  - NEVER include intermediate thinking or routing decisions"""
 
     async def synthesis(self, state: SynthesisAgentState) -> BaseAgentOutput:
         if self._system_prompt is None:

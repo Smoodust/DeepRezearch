@@ -68,17 +68,12 @@ class ResearchAgent(BaseAgent):
 
     @property
     def additional_input_prompt(self) -> str:
-        return """workflow_input: MUST be a focused research query. Include:
-- Specific questions to answer: "Find...", "Research..."
-- Required information types: "Statistics...", "Current events...", "Scientific studies..."
-- Scope constraints: "Focus on...", "Exclude..."
-- Output requirements: "Summarize...", "Compare..."
-
-context: Include UUIDs containing with:
-- User's original question
-- Any known facts to verify/expand upon
-- Timeframe requirements: "Current as of...", "Historical..."
-- Credibility requirements: "Peer-reviewed sources...", "Official data...\""""
+        return """- workflow_input: Frame as research questions: "Research [specific_topic] focusing on [aspects]. Find [type_of_information] and verify [key_facts]."
+- context: Include ONLY messages containing:
+  - Research topics or information needs
+  - Questions requiring factual answers
+  - Requests for current information or data not in training set
+  - NEVER include pure computational tasks or code requirements"""
 
     # Get current date in a readable format
     @staticmethod

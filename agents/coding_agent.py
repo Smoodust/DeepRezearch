@@ -71,17 +71,12 @@ class CodingAgent(BaseAgent):
 
     @property
     def additional_input_prompt(self) -> str:
-        return """workflow_input: MUST be a specific, executable Python task. Include:
-- Clear objective: "Calculate...", "Process...", "Generate..."
-- Required outputs: "Return...", "Print...", "Save..."
-- Any constraints: "Use only standard libraries", "Optimize for..."
-- Error handling expectations: "Validate input...", "Handle edge cases..."
-
-context: Include UUIDs containing with:
-- Mathematical formulas or algorithms if provided
-- Sample inputs/outputs if given
-- Data structures/format requirements
-- Success criteria: "The answer should be...\""""
+        return """- workflow_input: Provide explicit programming tasks: "Write Python code to [specific_calculation/algorithm] that [inputs] and returns [expected_output]"
+- context: Include ONLY messages containing:
+  - Numerical data, formulas, or calculations
+  - Programming requirements or constraints
+  - Previous code snippets or results (if continuing a computational task)
+  - NEVER include research questions or general knowledge requests"""
 
     def _create_generation_agent(self):
         model = ChatOllama(
