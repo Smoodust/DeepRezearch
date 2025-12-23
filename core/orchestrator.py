@@ -9,7 +9,7 @@ from langgraph.graph.message import BaseMessage
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from agents.base_agent import BaseAgent, BaseAgentStrcturedOutput, BaseAgentStrcturedOutput
+from agents.base_agent import BaseAgent, BaseAgentStrcturedOutput
 from agents.synthesis_agent import SynthesisAgent, SynthesisAgentState
 
 
@@ -252,10 +252,12 @@ class WorkflowOrchestrator:
             try:
                 workflow_input = "Context:\n" + "\n".join([state["messages"][ids].content for ids in state["last_judged_workflow_context"]])  # type: ignore
 
-                workflow_input += f"TASK:\n{state["last_judged_workflow_input"].to_string()}"
+                workflow_input += (
+                    f"TASK:\n{state["last_judged_workflow_input"].to_string()}"
+                )
 
                 logger.info(f"PROMPT: {workflow_input}")
-                
+
                 workflow_output = await self.workflows[current_workflow_type].run(
                     {"workflow_input": workflow_input}
                 )

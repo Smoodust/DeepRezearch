@@ -16,7 +16,8 @@ from pydantic import BaseModel, Field
 from core.state import (RawDocument, SearchedDocument,
                         SearchQueriesStructureOutput, SearchWorkflowState)
 
-from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState, BaseAgentStrcturedInput
+from .base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState,
+                         BaseAgentStrcturedInput)
 
 
 class WebResearchPlan(BaseAgentStrcturedInput):

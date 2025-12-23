@@ -2,12 +2,11 @@ import time
 import traceback
 import uuid
 from enum import Enum
-from typing import List, Literal, Optional, Type
+from typing import List, Literal, Type
 
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from langchain_core.tools import Tool
 from langchain_experimental.tools import PythonREPLTool
 from langchain_ollama import ChatOllama
 from langgraph.checkpoint.memory import InMemorySaver
@@ -19,7 +18,8 @@ from pydantic import BaseModel, Field
 from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
                         LLMCodeReview, WorkflowStep)
 
-from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState, BaseAgentStrcturedInput
+from .base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState,
+                         BaseAgentStrcturedInput)
 
 
 class IntentEnum(str, Enum):
@@ -41,7 +41,7 @@ class ComplexityEnum(str, Enum):
 class CodingUserInput(BaseAgentStrcturedInput):
     # The fields are defined in the order the LLM should reason through them.
     workflow_type: Literal["PYTHON_EXECUTOR"]
-    
+
     input: str = Field(description="Full task")
     step2_intent: IntentEnum = Field(description="The primary intent of the request.")
 
@@ -62,6 +62,7 @@ class CodingUserInput(BaseAgentStrcturedInput):
         # Testing Required
         {"Yes" if self.step6_test_required else "No"}
         """
+
 
 class CodingAgent(BaseAgent):
     def __init__(
