@@ -153,7 +153,7 @@ class WorkflowOrchestrator:
         analysis_prompt = self._workflow_input_template.render(
             messages=state["messages"],
             user_input=state["user_input"],
-            chosen_workflow=state["last_judged_workflow_type"]
+            chosen_workflow=state["last_judged_workflow_type"],
         )
 
         try:
@@ -172,7 +172,7 @@ class WorkflowOrchestrator:
             logger.info(f"Decision result: {decision_data.model_dump_json()}")
 
             result_ids = []
-            for ids in decision_data.selected_context_ids: #type: ignore
+            for ids in decision_data.selected_context_ids:  # type: ignore
                 ids = cast(int, ids)
                 if ids >= 0 and ids < len(state["messages"]):
                     result_ids.append(ids)
@@ -181,9 +181,7 @@ class WorkflowOrchestrator:
 
         except Exception as e:
             logger.error(f"Analysis error: {repr(e)}")
-            decision_data = BaseAgentStrcturedOutput(
-                selected_context_ids=[]
-            )
+            decision_data = BaseAgentStrcturedOutput(selected_context_ids=[])
 
         # Сохраняем решение в истории сообщений
         decision_message = AIMessage(decision_data.model_dump_json(indent=4))

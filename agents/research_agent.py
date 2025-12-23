@@ -3,7 +3,7 @@ import json
 import re
 import time
 from datetime import datetime
-from typing import Literal, Optional, Type, cast, List, Dict
+from typing import List, Literal, Optional, Type, cast
 
 import aiohttp
 from ddgs import DDGS
@@ -11,16 +11,17 @@ from html_to_markdown import ConversionOptions, convert
 from langchain.chat_models import init_chat_model
 from langgraph.graph import END, StateGraph
 from loguru import logger
+from pydantic import BaseModel, Field
 
 from core.state import (RawDocument, SearchedDocument,
                         SearchQueriesStructureOutput, SearchWorkflowState)
 
 from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
 
-from pydantic import BaseModel, Field
-    
+
 class WebResearchPlan(BaseModel):
     """Simplified schema for initial research planning (pre-web-search)."""
+
     workflow_type: Literal["WEB_RESEARCHER"]
     original_request: str
     interpreted_question: str
@@ -29,6 +30,7 @@ class WebResearchPlan(BaseModel):
     selected_context_ids: List[int] = Field(
         description="List of context IDs that should be passed to synthesis agent"
     )
+
 
 options = ConversionOptions()
 options.extract_metadata = False
@@ -87,7 +89,7 @@ class ResearchAgent(BaseAgent):
   - Questions requiring factual answers
   - Requests for current information or data not in training set
   - NEVER include pure computational tasks or code requirements"""
-    
+
     @property
     def get_input_model(self) -> Type[BaseModel]:
         return WebResearchPlan
