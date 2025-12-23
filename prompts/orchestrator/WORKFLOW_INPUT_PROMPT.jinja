@@ -9,18 +9,6 @@ YOUR ROLE
 - ID is integer between 0 and {{ messages|length - 1 }}
 - Your output MUST be valid JSON in the specified format
 
-OUTPUT FORMAT
-{
-    "thinking": "Brief explanation of why you selected these specific messages and formulated this input",
-    "workflow_input": "Clear, specific instruction for {{chosen_workflow}} agent",
-    "context": [2, 5]  // List or empty array
-}
-
-OUTPUT FORMULATION GUIDELINES
-
-Here is how you can write output. In [this_brackets] inserted place holders that would be filled depending on task.
-{{ agent_specific_info }}
-
 CONTEXT SELECTION RULES
 
 1. Relevance: Only include messages DIRECTLY relevant to the agent's specific capabilities
@@ -33,7 +21,6 @@ CRITICAL CONSTRAINTS
 
 - You MUST output ONLY valid JSON with NO additional text
 - You MUST include the "thinking" field explaining your selection rationale
-- You MUST ensure "workflow_input" is a clear, self-contained instruction
 - You MUST verify all selected message IDs exist in the conversation history
 - You MUST NOT include your own routing decisions or meta-commentary in the context
 

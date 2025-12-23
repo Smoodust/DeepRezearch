@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
-from typing import TypedDict
-
+from typing import List, TypedDict, Type
+from pydantic import BaseModel, Field
 from jinja2 import (Environment, FileSystemLoader, Template, TemplateNotFound,
                     select_autoescape)
 from langgraph.graph import StateGraph
@@ -15,6 +15,10 @@ class BaseAgentState(TypedDict):
 class BaseAgentOutput(TypedDict):
     output: str
 
+class BaseAgentStrcturedOutput(BaseModel):
+    selected_context_ids: List[int] = Field(
+        description="List of context IDs that should be passed to synthesis agent"
+    )
 
 class BaseAgent(ABC):
     def __init__(
@@ -45,9 +49,9 @@ class BaseAgent(ABC):
     @property
     def purpose(self) -> str:
         raise NotImplementedError()
-
+    
     @property
-    def additional_input_prompt(self) -> str:
+    def get_input_model(self) -> Type[BaseModel]:
         raise NotImplementedError()
 
     @property

@@ -9,7 +9,7 @@ from langgraph.graph.message import BaseMessage
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from agents.base_agent import BaseAgent
+from agents.base_agent import BaseAgent, BaseAgentStrcturedOutput
 from agents.synthesis_agent import SynthesisAgent, SynthesisAgentState
 
 
@@ -51,9 +51,6 @@ class WorkflowOrchestrator:
         self.base_model = init_chat_model(model_name, model_provider="ollama")
         self.model_workflow_type = self.base_model.with_structured_output(
             OrchestratorTypeDecision
-        )
-        self.model_workflow_input = self.base_model.with_structured_output(
-            OrchestratorInputDecision
         )
         self.workflows: Dict[str, BaseAgent] = {}
 
@@ -156,9 +153,9 @@ class WorkflowOrchestrator:
         analysis_prompt = self._workflow_input_template.render(
             messages=state["messages"],
             user_input=state["user_input"],
-            chosen_workflow=state["last_judged_workflow_type"],
-            agent_specific_info=current_agent.additional_input_prompt,
+            chosen_workflow=state["last_judged_workflow_type"]
         )
+
         try:
             # Формируем запрос к модели
             request_messages = [
@@ -168,26 +165,24 @@ class WorkflowOrchestrator:
                 SystemMessage(content=analysis_prompt),
             ]
 
-            decision_data: OrchestratorInputDecision = await self.model_workflow_input.ainvoke(request_messages)  # type: ignore
-            logger.info(f"Decision thinking: {decision_data.thinking}")
-            logger.success(
-                f"[orchestrator] made wrote input for agent: {decision_data.workflow_input}"
+            model_workflow_input = self.base_model.with_structured_output(
+                current_agent.get_input_model
             )
-            logger.info(f"Context: {decision_data.context}")
+            decision_data: BaseAgentStrcturedOutput = await model_workflow_input.ainvoke(request_messages)  # type: ignore
+            logger.info(f"Decision result: {decision_data.model_dump_json()}")
 
             result_ids = []
-            for ids in decision_data.context:
+            for ids in decision_data.selected_context_ids: #type: ignore
+                ids = cast(int, ids)
                 if ids >= 0 and ids < len(state["messages"]):
                     result_ids.append(ids)
-            decision_data.context = result_ids
-            logger.info(f"Cleaned context: {decision_data.context}")
+            decision_data.selected_context_ids = result_ids
+            logger.info(f"Cleaned context: {decision_data.selected_context_ids}")
 
         except Exception as e:
             logger.error(f"Analysis error: {repr(e)}")
-            decision_data = OrchestratorInputDecision(
-                thinking=f"Analysis error: {str(e)}",
-                workflow_input="Synthesize the information gathered so far",
-                context=[],
+            decision_data = BaseAgentStrcturedOutput(
+                selected_context_ids=[]
             )
 
         # Сохраняем решение в истории сообщений
@@ -197,8 +192,8 @@ class WorkflowOrchestrator:
             "user_input": state["user_input"],
             "messages": state["messages"] + [decision_message],
             "last_judged_workflow_type": state["last_judged_workflow_type"],
-            "last_judged_workflow_input": decision_data.workflow_input,
-            "last_judged_workflow_context": decision_data.context,
+            "last_judged_workflow_input": decision_data.model_dump_json(indent=4),
+            "last_judged_workflow_context": decision_data.selected_context_ids,
         }
 
     @logger.catch

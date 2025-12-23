@@ -1,7 +1,7 @@
 import time
 import traceback
 import uuid
-from typing import List
+from typing import List, Type
 
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
@@ -19,6 +19,54 @@ from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
 
 from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
 
+from pydantic import BaseModel, Field
+from typing import List, Optional, Literal
+from enum import Enum
+
+class IntentEnum(str, Enum):
+    """Possible intents of a user request."""
+    CODE_GENERATION = "code_generation"
+    СALCULATION = "make_calculations"
+    OTHER = "other"
+
+class ComplexityEnum(str, Enum):
+    """Estimated complexity of the task."""
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
+
+class CodingUserInput(BaseModel):
+    # The fields are defined in the order the LLM should reason through them.
+    workflow_type: Literal["PYTHON_EXECUTOR"]
+
+    step1_summary: str = Field(
+        description="A concise summary of the user's request."
+    )
+    step2_intent: IntentEnum = Field(
+        description="The primary intent of the request."
+    )
+    step3_complexity: ComplexityEnum = Field(
+        description="Estimated complexity of the task."
+    )
+    step4_required_actions: List[str] = Field(
+        description="Specific actions the coder agent should perform (e.g., 'write a function', 'debug', 'explain code')."
+    )
+    step5_potential_pitfalls: Optional[List[str]] = Field(
+        default=None,
+        description="Potential pitfalls or challenges the coder agent should be aware of."
+    )
+    step6_test_required: bool = Field(
+        default=False,
+        description="Whether the task likely requires writing tests."
+    )
+    step7_security_considerations: Optional[List[str]] = Field(
+        default=None,
+        description="Security-related considerations (e.g., unsafe functions, input validation)."
+    )
+    selected_context_ids: List[int] = Field(
+        default_factory=list,
+        description="List of ids from context that should be given to agent"
+    )
 
 class CodingAgent(BaseAgent):
     def __init__(
@@ -68,15 +116,10 @@ class CodingAgent(BaseAgent):
         Use when: Task requires computation, data manipulation, or algorithmic processing
         """
         return purpose
-
+    
     @property
-    def additional_input_prompt(self) -> str:
-        return """- workflow_input: Provide explicit programming tasks: "Write Python code to [specific_calculation/algorithm] that [inputs] and returns [expected_output]"
-- context: Include ONLY messages containing:
-  - Numerical data, formulas, or calculations
-  - Programming requirements or constraints
-  - Previous code snippets or results (if continuing a computational task)
-  - NEVER include research questions or general knowledge requests"""
+    def get_input_model(self) -> Type[BaseModel]:
+        return CodingUserInput
 
     def _create_generation_agent(self):
         model = ChatOllama(
