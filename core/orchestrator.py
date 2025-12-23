@@ -9,8 +9,9 @@ from langgraph.graph.message import BaseMessage
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from agents.base_agent import BaseAgent, BaseAgentStrcturedOutput
+from agents.base_agent import BaseAgent, BaseAgentStrcturedInput
 from agents.synthesis_agent import SynthesisAgent, SynthesisAgentState
+from template_manager import TemplateManager
 
 
 class OrchestratorTypeDecision(BaseModel):
@@ -37,7 +38,7 @@ class OrchestratorState(TypedDict):
     user_input: str
 
     last_judged_workflow_type: str
-    last_judged_workflow_input: BaseAgentStrcturedOutput
+    last_judged_workflow_input: BaseAgentStrcturedInput
     last_judged_workflow_context: list[int]
     messages: list[BaseMessage]
 
@@ -65,11 +66,6 @@ class WorkflowOrchestrator:
         else:
             raise Exception("There is no prompts folder")
 
-        self._workflow_type_template = None
-        self._workflow_type_user_template = None
-        self._workflow_input_template = None
-        self._analysis_template = None
-
     def register_workflow(self, workflow: BaseAgent):
         """Register a workflow with the orchestrator"""
         self.workflows[workflow.name] = workflow
@@ -83,13 +79,10 @@ class WorkflowOrchestrator:
 
         workflow_variants = "|".join([x for x in self.workflows.keys()])
 
-        if self._workflow_type_template is None:
-            self._workflow_type_template = self.jinja_env.get_template(
-                "WORKFLOW_TYPE_PROMPT.jinja"
-            )
-
-        rendered = self._workflow_type_template.render(
-            workflows_list=workflows_list, workflow_variants=workflow_variants
+        rendered = TemplateManager().render_template(
+            "WORKFLOW_TYPE_PROMPT.jinja",
+            workflows_list=workflows_list,
+            workflow_variants=workflow_variants
         )
         return rendered
 
@@ -143,17 +136,13 @@ class WorkflowOrchestrator:
         self, state: OrchestratorState
     ) -> OrchestratorState:
         """Analyze the request and make routing decision"""
-        if self._workflow_input_template is None:
-            self._workflow_input_template = self.jinja_env.get_template(
-                "WORKFLOW_INPUT_PROMPT.jinja"
-            )
-
         current_agent: BaseAgent = self.workflows[state["last_judged_workflow_type"]]
 
-        analysis_prompt = self._workflow_input_template.render(
+        analysis_prompt = TemplateManager().render_template(
+            "WORKFLOW_INPUT_PROMPT.jinja",
             messages=state["messages"],
             user_input=state["user_input"],
-            chosen_workflow=state["last_judged_workflow_type"],
+            chosen_workflow=state["last_judged_workflow_type"]
         )
 
         try:
@@ -181,7 +170,7 @@ class WorkflowOrchestrator:
 
         except Exception as e:
             logger.error(f"Analysis error: {repr(e)}")
-            decision_data = BaseAgentStrcturedOutput(selected_context_ids=[])
+            decision_data = BaseAgentStrcturedInput(selected_context_ids=[])
 
         # Сохраняем решение в истории сообщений
         decision_message = AIMessage(decision_data.model_dump_json(indent=4))

@@ -45,35 +45,26 @@ class BaseAgent(ABC):
         pass
 
     @property
+    @abstractmethod
     def name(self) -> str:
-        raise NotImplementedError()
+        pass
 
     @property
+    @abstractmethod
     def purpose(self) -> str:
-        raise NotImplementedError()
+        pass
 
     @property
+    @abstractmethod
     def get_input_model(self) -> Type[BaseModel]:
-        raise NotImplementedError()
+        pass
 
     @property
+    @abstractmethod
     def compiled_graph(self):
         if self._compiled_graph is None:
             self._compiled_graph = self.build_graph().compile()
         return self._compiled_graph
-
-    def _load_template(self, name: str, default: str = "default") -> Template:
-        if not self.jinja_env:
-            raise RuntimeError("Jinja environment not initialized")
-
-        try:
-            return self.jinja_env.get_template(name)
-        except TemplateNotFound:
-            logger.error(f"Template NOT FOUND: {name}")
-            raise
-        except Exception:
-            logger.exception(f"Template FOUND but FAILED to load: {name}")
-            raise
 
     async def run(self, state: BaseAgentState) -> BaseAgentOutput:
         return await self.compiled_graph.ainvoke(state)  # type: ignore

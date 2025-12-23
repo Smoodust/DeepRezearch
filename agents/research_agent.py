@@ -16,6 +16,8 @@ from pydantic import BaseModel, Field
 from core.state import (RawDocument, SearchedDocument,
                         SearchQueriesStructureOutput, SearchWorkflowState)
 
+from core.template_manager import TemplateManager
+
 from .base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState,
                          BaseAgentStrcturedInput)
 
@@ -66,11 +68,6 @@ class ResearchAgent(BaseAgent):
             "User-Agent": "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
         }
 
-        self._query_writer_tpl = None
-        self._site_info_tpl = None
-        self._final_summary_tpl = None
-        self._final_answer_tpl = None
-
         logger.info(
             f"[{self.name}] 🔧 Agent initialize with {model_name}, max_result={max_result}"
         )
@@ -111,12 +108,8 @@ class ResearchAgent(BaseAgent):
         return datetime.now().strftime("%B %d, %Y")
 
     async def create_search_queries(self, state: SearchWorkflowState):
-        if self._query_writer_tpl is None:
-            self._query_writer_tpl = self._load_template(
-                "research_agent/QUERY_WRITER.jinja"
-            )
-
-        context = self._query_writer_tpl.render(
+        context = TemplateManager().render_template(
+            "research_agent/QUERY_WRITER.jinja",
             number_queries=self.n_queries,
             current_date=self.get_current_date(),
             research_topic=state["workflow_input"],
@@ -207,11 +200,6 @@ class ResearchAgent(BaseAgent):
         return state
 
     async def extract_text_from_search(self, state: SearchWorkflowState):
-        if self._site_info_tpl is None:
-            self._site_info_tpl = self._load_template(
-                "research_agent/SITE_INFO_INSTRUCTIONS.jinja"
-            )
-
         contexts = []
 
         for doc in state["sources"]:
@@ -222,7 +210,8 @@ class ResearchAgent(BaseAgent):
                 markdown = convert(doc["source"], options)
                 markdown = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", markdown)
                 contexts.append(
-                    self._site_info_tpl.render(
+                    TemplateManager().render_template(
+                        "research_agent/SITE_INFO_INSTRUCTIONS.jinja",
                         markdown=markdown, workflow_input=state["workflow_input"]
                     )
                 )
@@ -262,22 +251,13 @@ class ResearchAgent(BaseAgent):
             return {"searched_documents": []}
 
     async def summary_to_output(self, state: SearchWorkflowState) -> BaseAgentOutput:
-        if self._final_summary_tpl is None:
-            self._final_summary_tpl = self._load_template(
-                "research_agent/FINAL_SUMMARY_PROMPT.jinja"
-            )
-
-        if self._final_answer_tpl is None:
-            self._final_answer_tpl = self._load_template(
-                "research_agent/FINAL_ANSWER_TEMPLATE.jinja"
-            )
-
         documents = [
             {"id": id + 1, "url": x["url"], "text": x["extracted_info"]}
             for id, x in enumerate(state["searched_documents"])
         ]
         prompt_docs = [{"id": x["id"], "text": x["text"]} for x in documents]
-        prompt = self._final_summary_tpl.render(
+        prompt = TemplateManager().render_template(
+            "research_agent/FINAL_SUMMARY_PROMPT.jinja",
             documents=json.dumps(prompt_docs, indent=4),
             workflow_input=state["workflow_input"],
         )
@@ -287,8 +267,9 @@ class ResearchAgent(BaseAgent):
         summary: str = (await self.model.ainvoke(prompt)).content  # type: ignore
         logger.success(f"RESEARCHER OUTPUT:\n{summary}")
 
-        output = {
-            "output": self._final_answer_tpl.render(
+        output: BaseAgentOutput = {
+            "output": TemplateManager().render_template(
+                "research_agent/FINAL_ANSWER_TEMPLATE.jinja",
                 summary=summary, documents=documents
             )
         }

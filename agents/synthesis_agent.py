@@ -8,6 +8,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
+from core.template_manager import TemplateManager
 
 
 class SynthesisStructuredOutput(BaseModel):
@@ -133,14 +134,17 @@ Capabilities:
 
         if self._synth_input_tpl is None:
             self._synth_input_tpl = self._load_template(
-                "synthesis_agent/SYNTHESIS_INPUT.jinja"
+                
             )
-
+        
         messages = state["messages"]
-        messages.append(SystemMessage(self._system_prompt))
+        messages.append(SystemMessage(TemplateManager().render_template("synthesis_agent/SYNTHESIS_SYSTEM_PROMPT.jinja")))
         messages.append(
             HumanMessage(
-                self._synth_input_tpl.render(workflow_input=state["workflow_input"])
+                TemplateManager().render_template(
+                    "synthesis_agent/SYNTHESIS_INPUT.jinja",
+                    workflow_input=state["workflow_input"]
+                )
             )
         )
         response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(
