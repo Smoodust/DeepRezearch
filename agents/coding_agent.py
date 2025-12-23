@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
                         LLMCodeReview, WorkflowStep)
 
-from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState, BaseAgentStrcturedOutput
+from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState, BaseAgentStrcturedInput
 
 
 class IntentEnum(str, Enum):
@@ -38,7 +38,7 @@ class ComplexityEnum(str, Enum):
     HARD = "hard"
 
 
-class CodingUserInput(BaseAgentStrcturedOutput):
+class CodingUserInput(BaseAgentStrcturedInput):
     # The fields are defined in the order the LLM should reason through them.
     workflow_type: Literal["PYTHON_EXECUTOR"]
     
