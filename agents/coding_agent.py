@@ -8,7 +8,7 @@ from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import Tool
-from langchain_experimental.utilities import PythonREPL
+from langchain_experimental.tools import PythonREPLTool
 from langchain_ollama import ChatOllama
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.errors import GraphRecursionError
@@ -87,13 +87,8 @@ class CodingAgent(BaseAgent):
         self._system_tpl = None
 
         self.model = init_chat_model(model_name, model_provider="ollama")
-        self.tools = [
-            Tool(
-                name="python_repl",
-                description="Execute Python code. Input must be valid Python code. Use print() to see output.",
-                func=PythonREPL().run,
-            ),
-        ]
+
+        self.tools = [PythonREPLTool()]
 
         self.analysis_agent = self.model.with_structured_output(CodeAnalysis)
         self.review_agent = self.model.with_structured_output(LLMCodeReview)
