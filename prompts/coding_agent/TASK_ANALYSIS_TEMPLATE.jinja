@@ -2,13 +2,15 @@ Analyze the following coding task and create a comprehensive implementation plan
 
 TASK: {{ task }}
 
-Please provide a structured analysis including:
-1. Step-by-step implementation plan
-2. Required Python 3.10+ standard library if needed
-3. Complexity assessment
-4. Potential risks and mitigation strategies
-5. Testing approach
-6. Functional requirements
-7. Any assumptions made
+REQUIREMENTS:
+1. Provide at least 3 concrete implementation steps in `plan.steps`.
+2. For `libraries` list ONLY standard library modules you will use (names only). If no stdlib modules beyond builtins are needed, use [].
+3. Set complexity to exactly one of: "Low", "Medium", "High".
+4. Populate `risks` with concrete issues, and for each risk propose mitigation inside the `risks` entries or in steps.
+5. Provide `test_approach` with concrete unit test ideas (use `unittest` or doctest).
+6. Fill `requirements` with at least one functional requirement and one performance/acceptance criterion.
+7. Fill `assumptions` with any assumptions about environment or inputs.
+
+Important: DO NOT reference or assume availability of pandas, numpy, scipy, requests, or any non-stdlib library. If the task would normally require them, show how to do an equivalent implementation with stdlib and call out performance tradeoffs.
 
 Return ONLY valid JSON matching the CodeAnalysis schema.
