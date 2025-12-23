@@ -89,13 +89,11 @@ class WorkflowOrchestrator:
     async def decide_workflow_type(self, state: OrchestratorState) -> OrchestratorState:
         """Analyze the request and make routing decision"""
 
-        if self._analysis_template is None:
-            self._analysis_template = self.jinja_env.get_template(
-                "ANALYSIS_PROMPT.jinja"
-            )
-
-        analysis_prompt = self._analysis_template.render(user_input=state["user_input"])
-
+        analysis_prompt = TemplateManager().render_template(
+            "ANALYSIS_PROMPT.jinja",
+            user_input=state["user_input"]
+        )
+        
         try:
             # Формируем запрос к модели
             request_messages = [
