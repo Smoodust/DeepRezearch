@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
                         LLMCodeReview, WorkflowStep)
 
-from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
+from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState, BaseAgentStrcturedOutput
 
 
 class IntentEnum(str, Enum):
@@ -38,34 +38,30 @@ class ComplexityEnum(str, Enum):
     HARD = "hard"
 
 
-class CodingUserInput(BaseModel):
+class CodingUserInput(BaseAgentStrcturedOutput):
     # The fields are defined in the order the LLM should reason through them.
     workflow_type: Literal["PYTHON_EXECUTOR"]
-
-    step1_summary: str = Field(description="A concise summary of the user's request.")
+    
+    input: str = Field(description="Full task")
     step2_intent: IntentEnum = Field(description="The primary intent of the request.")
-    step3_complexity: ComplexityEnum = Field(
-        description="Estimated complexity of the task."
-    )
-    step4_required_actions: List[str] = Field(
-        description="Specific actions the coder agent should perform (e.g., 'write a function', 'debug', 'explain code')."
-    )
-    step5_potential_pitfalls: Optional[List[str]] = Field(
-        default=None,
-        description="Potential pitfalls or challenges the coder agent should be aware of.",
-    )
+
     step6_test_required: bool = Field(
         default=False, description="Whether the task likely requires writing tests."
     )
-    step7_security_considerations: Optional[List[str]] = Field(
-        default=None,
-        description="Security-related considerations (e.g., unsafe functions, input validation).",
-    )
+
     selected_context_ids: List[int] = Field(
         default_factory=list,
         description="List of ids from context that should be given to agent",
     )
 
+    def to_string(self) -> str:
+        return f"""
+        #TASK
+        {self.input}
+
+        # Testing Required
+        {"Yes" if self.step6_test_required else "No"}
+        """
 
 class CodingAgent(BaseAgent):
     def __init__(
@@ -231,6 +227,8 @@ class CodingAgent(BaseAgent):
             result = state.values
             messages = result.get("messages", [])
 
+            print(messages)
+
             tool_output = next(
                 (m.content for m in reversed(messages) if isinstance(m, ToolMessage)),
                 "[No output produced]",
@@ -240,6 +238,8 @@ class CodingAgent(BaseAgent):
                 (m.tool_calls for m in reversed(messages) if isinstance(m, AIMessage)),
                 "[No output produced]",
             )
+
+            code_str = ""
 
             for tc in ai_messsage:
                 if tc.get("name") == "python_repl":

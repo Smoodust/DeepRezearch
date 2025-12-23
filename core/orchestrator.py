@@ -9,7 +9,7 @@ from langgraph.graph.message import BaseMessage
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from agents.base_agent import BaseAgent, BaseAgentStrcturedOutput
+from agents.base_agent import BaseAgent, BaseAgentStrcturedOutput, BaseAgentStrcturedOutput
 from agents.synthesis_agent import SynthesisAgent, SynthesisAgentState
 
 
@@ -37,7 +37,7 @@ class OrchestratorState(TypedDict):
     user_input: str
 
     last_judged_workflow_type: str
-    last_judged_workflow_input: str
+    last_judged_workflow_input: BaseAgentStrcturedOutput
     last_judged_workflow_context: list[int]
     messages: list[BaseMessage]
 
@@ -190,7 +190,7 @@ class WorkflowOrchestrator:
             "user_input": state["user_input"],
             "messages": state["messages"] + [decision_message],
             "last_judged_workflow_type": state["last_judged_workflow_type"],
-            "last_judged_workflow_input": decision_data.model_dump_json(indent=4),
+            "last_judged_workflow_input": decision_data,
             "last_judged_workflow_context": decision_data.selected_context_ids,
         }
 
@@ -251,7 +251,11 @@ class WorkflowOrchestrator:
 
             try:
                 workflow_input = "Context:\n" + "\n".join([state["messages"][ids].content for ids in state["last_judged_workflow_context"]])  # type: ignore
-                workflow_input += "\nUser Input: " + state["last_judged_workflow_input"]
+
+                workflow_input += f"TASK:\n{state["last_judged_workflow_input"].to_string()}"
+
+                logger.info(f"PROMPT: {workflow_input}")
+                
                 workflow_output = await self.workflows[current_workflow_type].run(
                     {"workflow_input": workflow_input}
                 )

@@ -16,10 +16,10 @@ from pydantic import BaseModel, Field
 from core.state import (RawDocument, SearchedDocument,
                         SearchQueriesStructureOutput, SearchWorkflowState)
 
-from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
+from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState, BaseAgentStrcturedInput
 
 
-class WebResearchPlan(BaseModel):
+class WebResearchPlan(BaseAgentStrcturedInput):
     """Simplified schema for initial research planning (pre-web-search)."""
 
     workflow_type: Literal["WEB_RESEARCHER"]
@@ -30,6 +30,16 @@ class WebResearchPlan(BaseModel):
     selected_context_ids: List[int] = Field(
         description="List of context IDs that should be passed to synthesis agent"
     )
+
+    def to_string(self) -> str:
+        return f"""# Original request
+        {self.original_request}
+        # Interpreted question
+        {self.interpreted_question}
+        # Research angles
+        {"\n".join(self.research_angles)}
+        # Search queries
+        {"\n".join(self.search_queries)}"""
 
 
 options = ConversionOptions()
