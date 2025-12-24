@@ -8,10 +8,11 @@ from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.graph.message import BaseMessage
 from loguru import logger
 from pydantic import BaseModel, Field
-from .template_manager import TemplateManager
 
 from agents.base_agent import BaseAgent, BaseAgentStrcturedInput
 from agents.synthesis_agent import SynthesisAgent, SynthesisAgentState
+
+from .template_manager import TemplateManager
 
 
 class OrchestratorTypeDecision(BaseModel):
