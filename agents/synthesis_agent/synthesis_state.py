@@ -1,8 +1,9 @@
-from langgraph.graph.message import BaseMessage
 from typing import Any, Dict, List, Literal, Optional, TypedDict
+
+from langgraph.graph.message import BaseMessage
 from pydantic import BaseModel, Field
 
-from ..base_agent import  BaseAgentState
+from ..base_agent import BaseAgentState
 
 
 class SynthesisStructuredOutput(BaseModel):

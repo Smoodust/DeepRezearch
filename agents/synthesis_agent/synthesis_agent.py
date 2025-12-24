@@ -9,15 +9,9 @@ from pydantic import BaseModel
 from core.template_manager import TemplateManager
 
 from ..base_agent import BaseAgent, BaseAgentOutput
-
-from .synthesis_state import (
-    SynthesisStructuredOutput,
-    SynthesisAgentState,
-    SynthesisAnalysis,
-    OverallSynthesisState,
-    ContextRelevance,
-)
 from .synthesis_config import SynthesisAgentConfig
+from .synthesis_state import (OverallSynthesisState, SynthesisAgentState,
+                              SynthesisAnalysis, SynthesisStructuredOutput)
 
 
 class SynthesisAgent(BaseAgent):
