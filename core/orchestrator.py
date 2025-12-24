@@ -10,7 +10,8 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from agents.base_agent import BaseAgent, BaseAgentStrcturedInput
-from agents.synthesis_agent.synthesis_agent import SynthesisAgent, SynthesisAgentState
+from agents.synthesis_agent.synthesis_agent import (SynthesisAgent,
+                                                    SynthesisAgentState)
 
 from .template_manager import TemplateManager
 

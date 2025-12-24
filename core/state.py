@@ -32,5 +32,3 @@ class SearchWorkflowState(BaseAgentState):
     search_queries: list[str]
     sources: list[RawDocument]
     searched_documents: Annotated[list[SearchedDocument], operator.add]
-
-

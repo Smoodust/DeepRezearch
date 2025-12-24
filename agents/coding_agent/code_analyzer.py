@@ -1,8 +1,9 @@
 from langchain_core.language_models import BaseChatModel
 from loguru import logger
 
-from .code_state import CodeAnalysis
 from core.template_manager import TemplateManager
+
+from .code_state import CodeAnalysis
 
 
 class CodeAnalyzer:
