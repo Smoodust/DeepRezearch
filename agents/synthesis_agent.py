@@ -128,14 +128,6 @@ Capabilities:
         return SynthesisAnalysis
 
     async def synthesis(self, state: SynthesisAgentState) -> BaseAgentOutput:
-        if self._system_prompt is None:
-            self._system_prompt = self._load_template(
-                "synthesis_agent/SYNTHESIS_SYSTEM_PROMPT.jinja"
-            ).render()
-
-        if self._synth_input_tpl is None:
-            self._synth_input_tpl = self._load_template()
-
         messages = state["messages"]
         messages.append(
             SystemMessage(

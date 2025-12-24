@@ -8,7 +8,7 @@ from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.graph.message import BaseMessage
 from loguru import logger
 from pydantic import BaseModel, Field
-from template_manager import TemplateManager
+from .template_manager import TemplateManager
 
 from agents.base_agent import BaseAgent, BaseAgentStrcturedInput
 from agents.synthesis_agent import SynthesisAgent, SynthesisAgentState
@@ -80,7 +80,7 @@ class WorkflowOrchestrator:
         workflow_variants = "|".join([x for x in self.workflows.keys()])
 
         rendered = TemplateManager().render_template(
-            "WORKFLOW_TYPE_PROMPT.jinja",
+            "orchestrator/WORKFLOW_TYPE_PROMPT.jinja",
             workflows_list=workflows_list,
             workflow_variants=workflow_variants,
         )
@@ -90,7 +90,7 @@ class WorkflowOrchestrator:
         """Analyze the request and make routing decision"""
 
         analysis_prompt = TemplateManager().render_template(
-            "ANALYSIS_PROMPT.jinja", user_input=state["user_input"]
+            "orchestrator/ANALYSIS_PROMPT.jinja", user_input=state["user_input"]
         )
 
         try:
@@ -136,7 +136,7 @@ class WorkflowOrchestrator:
         current_agent: BaseAgent = self.workflows[state["last_judged_workflow_type"]]
 
         analysis_prompt = TemplateManager().render_template(
-            "WORKFLOW_INPUT_PROMPT.jinja",
+            "orchestrator/WORKFLOW_INPUT_PROMPT.jinja",
             messages=state["messages"],
             user_input=state["user_input"],
             chosen_workflow=state["last_judged_workflow_type"],

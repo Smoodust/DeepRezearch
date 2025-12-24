@@ -2,7 +2,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Type, TypedDict
 
-from jinja2 import (Environment, FileSystemLoader, select_autoescape)
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 from langgraph.graph import StateGraph
 from pydantic import BaseModel
 
@@ -23,20 +23,8 @@ class BaseAgentStrcturedInput(BaseModel):
 class BaseAgent(ABC):
     def __init__(
         self,
-        templates_dir: str | None = "prompts",
     ):
         self._compiled_graph = None
-
-        self.template_dir = templates_dir
-        if templates_dir and os.path.isdir(templates_dir):
-            self.jinja_env = Environment(
-                loader=FileSystemLoader(templates_dir),
-                autoescape=select_autoescape(enabled_extensions=()),
-                trim_blocks=True,
-                lstrip_blocks=True,
-            )
-        else:
-            self.jinja_env = None
 
     @abstractmethod
     def build_graph(self) -> StateGraph:
@@ -58,7 +46,6 @@ class BaseAgent(ABC):
         pass
 
     @property
-    @abstractmethod
     def compiled_graph(self):
         if self._compiled_graph is None:
             self._compiled_graph = self.build_graph().compile()
