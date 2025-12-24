@@ -1,10 +1,11 @@
 from langchain_core.language_models import BaseChatModel
 from loguru import logger
 
-from .code_config import CodingAgentConfig
-
 from core.state import Code, CodeAnalysis, CodeReview, LLMCodeReview
 from core.template_manager import TemplateManager
+
+from .code_config import CodingAgentConfig
+
 
 class CodeReviewer:
     def __init__(self, model: BaseChatModel, config: CodingAgentConfig):
@@ -54,9 +55,9 @@ class CodeReviewer:
 
     def _create_fallback_review(self) -> CodeReview:
         return CodeReview(
-                approved=False,
-                overall_quality=0,
-                suggestions=[
-                    "Review failed due to technical error. Please check the code manually."
-                ],
-            )
+            approved=False,
+            overall_quality=0,
+            suggestions=[
+                "Review failed due to technical error. Please check the code manually."
+            ],
+        )

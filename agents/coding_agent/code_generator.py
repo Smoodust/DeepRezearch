@@ -1,18 +1,17 @@
 from typing import Optional
 
-from langchain_core.tools import Tool
-from langgraph.checkpoint.base import BaseCheckpointSaver
-from langchain_core.language_models import BaseChatModel
-from langgraph.checkpoint.memory import InMemorySaver
 from langchain.agents import create_agent
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.tools import Tool
+from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.errors import GraphRecursionError
 from loguru import logger
 
-from .code_config import CodingAgentConfig
-
-from core.state import CodeAnalysis, Code
+from core.state import Code, CodeAnalysis
 from core.template_manager import TemplateManager
+
+from .code_config import CodingAgentConfig
 
 
 class CodeGenerator:
@@ -29,7 +28,12 @@ class CodeGenerator:
         self.tools = tools
         self.name = "CodeGenerator"
 
-        model = config.Chat(model=config.model_name, format="json", temperature=config.temperature, num_predict=config.num_predict)
+        model = config.Chat(
+            model=config.model_name,
+            format="json",
+            temperature=config.temperature,
+            num_predict=config.num_predict,
+        )
 
         self.generation_agent = create_agent(
             model=model,

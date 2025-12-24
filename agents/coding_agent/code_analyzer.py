@@ -4,6 +4,7 @@ from loguru import logger
 from core.state import CodeAnalysis
 from core.template_manager import TemplateManager
 
+
 class CodeAnalyzer:
     def __init__(self, model: BaseChatModel):
         self.analysis_agent = model.with_structured_output(CodeAnalysis)
@@ -37,7 +38,7 @@ class CodeAnalyzer:
             logger.error(f"[{self.name}] Trace:\n{traceback.format_exc()}")
 
             return self._create_fallback_analysis(task)
-    
+
     def _create_fallback_analysis(self, task: str) -> CodeAnalysis:
         return CodeAnalysis(
             task=task,

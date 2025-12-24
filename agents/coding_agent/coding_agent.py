@@ -1,33 +1,25 @@
 import time
-import traceback
 import uuid
 from typing import Optional, Type
 
-from langgraph.checkpoint.base import BaseCheckpointSaver
 from langchain.chat_models import init_chat_model
 from langchain_experimental.tools import PythonREPLTool
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, StateGraph
 from loguru import logger
 from pydantic import BaseModel
 
-from core.state import (
-    Code,
-    CodeAgentState,
-    CodeAnalysis,
-    CodeReview,
-    WorkflowStep,
-)
+from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
+                        WorkflowStep)
 
 from ..base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
-
-from .coder_input import CodingUserInput
-from .code_interfaces import ICodeAnalyzer, ICodeGenerator, ICodeReviewer
-from .code_config import CodingAgentConfig
-
 from .code_analyzer import CodeAnalyzer
+from .code_config import CodingAgentConfig
 from .code_generator import CodeGenerator
+from .code_interfaces import ICodeAnalyzer, ICodeGenerator, ICodeReviewer
 from .code_reviewer import CodeReviewer
+from .coder_input import CodingUserInput
 
 
 class CodingAgent(BaseAgent):
@@ -50,9 +42,7 @@ class CodingAgent(BaseAgent):
         self.max_retries = config.max_retries
 
         self.analyzer = analyzer or CodeAnalyzer(model)
-        self.generator = generator or CodeGenerator(
-            config, tools, checkpointer
-        )
+        self.generator = generator or CodeGenerator(config, tools, checkpointer)
         self.reviewer = reviewer or CodeReviewer(model, config=config)
 
         self._name = config.name
