@@ -78,7 +78,7 @@ class CodingAgent(BaseAgent):
 
         self.max_retries = max_retries
         self.approval_treshold = approval_treshold
-        
+
         self.model = init_chat_model(model_name, model_provider="ollama")
 
         self.tools = [PythonREPLTool()]
@@ -113,7 +113,9 @@ class CodingAgent(BaseAgent):
             model=self.model_name, format="json", temperature=0.1, num_predict=2048
         )
 
-        system_prompt = TemplateManager().render_template("coding_agent/CODE_GENERATION_PROMPT.jinja")
+        system_prompt = TemplateManager().render_template(
+            "coding_agent/CODE_GENERATION_PROMPT.jinja"
+        )
 
         return create_agent(
             model=model,
@@ -128,7 +130,9 @@ class CodingAgent(BaseAgent):
         if not task or not task.strip():
             raise ValueError("Task cannot be empty")
 
-        analysis_prompt = TemplateManager().render_template("coding_agent/TASK_ANALYSIS_TEMPLATE.jinja", task=task)
+        analysis_prompt = TemplateManager().render_template(
+            "coding_agent/TASK_ANALYSIS_TEMPLATE.jinja", task=task
+        )
 
         try:
             response: CodeAnalysis = await self.analysis_agent.ainvoke(analysis_prompt)
@@ -170,7 +174,7 @@ class CodingAgent(BaseAgent):
             task=task,
             plan=analysis.model_dump(),
             requirements=analysis.requirements,
-            feedback=feedback[-3:] if feedback else []
+            feedback=feedback[-3:] if feedback else [],
         )
 
         logger.debug(f"[{self.name}] 🔄 Start generating code")

@@ -7,8 +7,9 @@ from langgraph.graph.message import BaseMessage
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
 from core.template_manager import TemplateManager
+
+from .base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
 
 
 class SynthesisStructuredOutput(BaseModel):
@@ -133,17 +134,21 @@ Capabilities:
             ).render()
 
         if self._synth_input_tpl is None:
-            self._synth_input_tpl = self._load_template(
-                
-            )
-        
+            self._synth_input_tpl = self._load_template()
+
         messages = state["messages"]
-        messages.append(SystemMessage(TemplateManager().render_template("synthesis_agent/SYNTHESIS_SYSTEM_PROMPT.jinja")))
+        messages.append(
+            SystemMessage(
+                TemplateManager().render_template(
+                    "synthesis_agent/SYNTHESIS_SYSTEM_PROMPT.jinja"
+                )
+            )
+        )
         messages.append(
             HumanMessage(
                 TemplateManager().render_template(
                     "synthesis_agent/SYNTHESIS_INPUT.jinja",
-                    workflow_input=state["workflow_input"]
+                    workflow_input=state["workflow_input"],
                 )
             )
         )

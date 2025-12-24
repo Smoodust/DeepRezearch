@@ -15,7 +15,6 @@ from pydantic import BaseModel, Field
 
 from core.state import (RawDocument, SearchedDocument,
                         SearchQueriesStructureOutput, SearchWorkflowState)
-
 from core.template_manager import TemplateManager
 
 from .base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState,
@@ -212,7 +211,8 @@ class ResearchAgent(BaseAgent):
                 contexts.append(
                     TemplateManager().render_template(
                         "research_agent/SITE_INFO_INSTRUCTIONS.jinja",
-                        markdown=markdown, workflow_input=state["workflow_input"]
+                        markdown=markdown,
+                        workflow_input=state["workflow_input"],
                     )
                 )
 
@@ -270,7 +270,8 @@ class ResearchAgent(BaseAgent):
         output: BaseAgentOutput = {
             "output": TemplateManager().render_template(
                 "research_agent/FINAL_ANSWER_TEMPLATE.jinja",
-                summary=summary, documents=documents
+                summary=summary,
+                documents=documents,
             )
         }
 
