@@ -10,7 +10,7 @@ from langgraph.graph import END, StateGraph
 from loguru import logger
 from pydantic import BaseModel
 
-from core.state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
+from .code_state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
                         WorkflowStep)
 
 from ..base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
