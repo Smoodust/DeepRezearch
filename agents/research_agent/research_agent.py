@@ -3,7 +3,7 @@ import json
 import re
 import time
 from datetime import datetime
-from typing import List, Literal, Optional, Type, cast
+from typing import Optional, Type, cast
 
 import aiohttp
 from ddgs import DDGS
@@ -11,37 +11,15 @@ from html_to_markdown import ConversionOptions, convert
 from langchain.chat_models import init_chat_model
 from langgraph.graph import END, StateGraph
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from core.state import (RawDocument, SearchedDocument,
                         SearchQueriesStructureOutput, SearchWorkflowState)
 from core.template_manager import TemplateManager
 
-from .base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState,
-                         BaseAgentStrcturedInput)
-
-
-class WebResearchPlan(BaseAgentStrcturedInput):
-    """Simplified schema for initial research planning (pre-web-search)."""
-
-    workflow_type: Literal["WEB_RESEARCHER"]
-    original_request: str
-    interpreted_question: str
-    research_angles: List[str]
-    search_queries: List[str]
-    selected_context_ids: List[int] = Field(
-        description="List of context IDs that should be passed to synthesis agent"
-    )
-
-    def to_string(self) -> str:
-        return f"""# Original request
-        {self.original_request}
-        # Interpreted question
-        {self.interpreted_question}
-        # Research angles
-        {"\n".join(self.research_angles)}
-        # Search queries
-        {"\n".join(self.search_queries)}"""
+from ..base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState)
+from research_config import ResearchAgentConfig
+from research_state import WebResearchPlan
 
 
 options = ConversionOptions()
@@ -50,52 +28,37 @@ options.autolinks = False
 
 
 class ResearchAgent(BaseAgent):
-    def __init__(self, model_name: str, max_result: int, n_queries: int):
+    def __init__(self, config: ResearchAgentConfig):
 
         super().__init__()
 
-        self.model_name = model_name
-        self.model = init_chat_model(model_name, model_provider="ollama")
+        self.model_name = config.model_name
+        self.model = init_chat_model(self.model_name, model_provider="ollama")
         self.model_search_queries = self.model.with_structured_output(
             SearchQueriesStructureOutput
         )
 
-        self.n_queries = n_queries
-        self.max_result = max_result
-
         self.user_agent = {
-            "User-Agent": "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
+            "User-Agent": config.user_agent
         }
 
+        self._config = config
+
         logger.info(
-            f"[{self.name}] 🔧 Agent initialize with {model_name}, max_result={max_result}"
+            f"[{self.name}] 🔧 Agent initialize with {self.model_name}, max_result={self._config.max_result}"
         )
 
     @property
     def name(self):
-        return "WEB_RESEARCHER"
+        return self._config.name
 
     @property
     def purpose(self):
-        purpose = """
-        Gather, analyze, and summarize information from the internet
-        Capabilities:
-        - Web search and information retrieval
-        - Multi-source data synthesis
-        - Fact-checking and source verification
-        - Summarization and contextual analysis
-        Use when: Task requires current information, research, or data not in training set
-        """
-        return purpose
+        return self._config.puprose
 
     @property
     def additional_input_prompt(self) -> str:
-        return """- workflow_input: Frame as research questions: "Research [specific_topic] focusing on [aspects]. Find [type_of_information] and verify [key_facts]."
-- context: Include ONLY messages containing:
-  - Research topics or information needs
-  - Questions requiring factual answers
-  - Requests for current information or data not in training set
-  - NEVER include pure computational tasks or code requirements"""
+        return self._config.additional_input_prompt
 
     @property
     def get_input_model(self) -> Type[BaseModel]:
@@ -109,7 +72,7 @@ class ResearchAgent(BaseAgent):
     async def create_search_queries(self, state: SearchWorkflowState):
         context = TemplateManager().render_template(
             "research_agent/QUERY_WRITER.jinja",
-            number_queries=self.n_queries,
+            number_queries=self._config.n_queries,
             current_date=self.get_current_date(),
             research_topic=state["workflow_input"],
         )
@@ -117,9 +80,9 @@ class ResearchAgent(BaseAgent):
         try:
             response: SearchQueriesStructureOutput = await self.model_search_queries.ainvoke(context)  # type: ignore
             logger.info(
-                f"[{self.name}] 🔍 The following search queries were selected: {response.query[:self.n_queries]}"
+                f"[{self.name}] 🔍 The following search queries were selected: {response.query[:self._config.n_queries]}"
             )
-            return {"search_queries": response.query[: self.n_queries]}
+            return {"search_queries": response.query[:self._config.n_queries]}
         except Exception as e:
             logger.error(f"[{self.name}] ❌ Error in creating search queries: {e}")
             return {"search_queries": []}
@@ -138,11 +101,11 @@ class ResearchAgent(BaseAgent):
         ) as session:
             for query in state["search_queries"]:
                 logger.info(
-                    f"[{self.name}] 🔍 Start searching: '{query}' (max results: {self.max_result})"
+                    f"[{self.name}] 🔍 Start searching: '{query}' (max results: {self._confi.max_result})"
                 )
 
                 try:
-                    search_results = DDGS().text(query, max_results=self.max_result)  # type: ignore
+                    search_results = DDGS().text(query, max_results=self._confi.max_result)  # type: ignore
 
                     logger.info(
                         f"[{self.name}] 📊 Received  {len(search_results)} results from the search engine"

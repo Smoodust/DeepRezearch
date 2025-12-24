@@ -7,9 +7,9 @@ from loguru import logger
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from agents.coding_agent.coding_agent_factory import coding_agent
-from agents.research_agent import ResearchAgent
+from agents.research_agent.research_agent import ResearchAgent
 from agents.synthesis_agent.synthesis_agent import synthesis_agent
-from core.orchestrator import WorkflowOrchestrator
+from agents.orchestrator.orchestrator import WorkflowOrchestrator
 
 logger.add("agents.log")
 

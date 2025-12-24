@@ -1,51 +1,21 @@
 import json
 import os
-from typing import Dict, TypedDict, cast
+from typing import Dict, cast
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, SystemMessage
-from langgraph.graph.message import BaseMessage
+
 from loguru import logger
-from pydantic import BaseModel, Field
 
 from agents.base_agent import BaseAgent, BaseAgentStrcturedInput
 from agents.synthesis_agent.synthesis_agent import (SynthesisAgent,
                                                     SynthesisAgentState)
 
-from .template_manager import TemplateManager
+from ...core.template_manager import TemplateManager
+from orchestrator_state import *
 
-
-class OrchestratorTypeDecision(BaseModel):
-    """Model for orchestrator routing decision"""
-
-    thinking: str = Field(description="Reasoning behind the decision")
-    workflow_type: str = Field(description="Type of workflow")
-    confidence: float = Field(description="Confidence score from 0 to 1")
-
-
-class OrchestratorInputDecision(BaseModel):
-    """Model for orchestrator routing decision"""
-
-    thinking: str = Field(description="Reasoning behind the decision")
-    workflow_input: str = Field(
-        description="Command or request that this workflow should do"
-    )
-    context: list[int] = Field(
-        description="List of ids messages that would be put into context"
-    )
-
-
-class OrchestratorState(TypedDict):
-    user_input: str
-
-    last_judged_workflow_type: str
-    last_judged_workflow_input: BaseAgentStrcturedInput
-    last_judged_workflow_context: list[int]
-    messages: list[BaseMessage]
-
-
-class WorkflowOrchestrator:
+class WorkflowOrchestrator(BaseAgent):
     def __init__(
         self,
         model_name: str = "qwen3:0.6b",
