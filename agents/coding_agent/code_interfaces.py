@@ -1,6 +1,6 @@
 from typing import Optional, Protocol
 
-from core.state import Code, CodeAnalysis, CodeReview
+from .code_state import Code, CodeAnalysis, CodeReview
 
 
 class ICodeAnalyzer(Protocol):

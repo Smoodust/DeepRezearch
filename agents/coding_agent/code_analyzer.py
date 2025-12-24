@@ -1,7 +1,7 @@
 from langchain_core.language_models import BaseChatModel
 from loguru import logger
 
-from core.state import CodeAnalysis
+from .code_state import CodeAnalysis
 from core.template_manager import TemplateManager
 
 
