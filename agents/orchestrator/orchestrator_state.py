@@ -1,7 +1,10 @@
+from typing import TypedDict
+
 from langgraph.graph.message import BaseMessage
 from pydantic import BaseModel, Field
-from typing import TypedDict
+
 from agents.base_agent import BaseAgentStrcturedInput
+
 
 class OrchestratorTypeDecision(BaseModel):
     """Model for orchestrator routing decision"""

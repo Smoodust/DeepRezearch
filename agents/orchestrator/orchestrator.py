@@ -5,15 +5,15 @@ from typing import Dict, cast
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, SystemMessage
-
 from loguru import logger
+from orchestrator_state import *
 
 from agents.base_agent import BaseAgent, BaseAgentStrcturedInput
 from agents.synthesis_agent.synthesis_agent import (SynthesisAgent,
                                                     SynthesisAgentState)
 
 from ...core.template_manager import TemplateManager
-from orchestrator_state import *
+
 
 class WorkflowOrchestrator(BaseAgent):
     def __init__(

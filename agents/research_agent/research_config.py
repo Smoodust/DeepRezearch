@@ -7,7 +7,7 @@ class ResearchAgentConfig:
 
     max_result: int
     n_queries: int
-    
+
     model_name: str
 
     name: str = "WEB_RESEARCHER"
@@ -26,4 +26,6 @@ Use when: Task requires current information, research, or data not in training s
   - Requests for current information or data not in training set
   - NEVER include pure computational tasks or code requirements"""
 
-    user_agent: str = "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
+    user_agent: str = (
+        "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
+    )

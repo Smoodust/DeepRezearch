@@ -12,4 +12,6 @@ class OrchestratorAgentConfig:
 
     additional_input_prompt: str = ""
 
-    user_agent: str = "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
+    user_agent: str = (
+        "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
+    )

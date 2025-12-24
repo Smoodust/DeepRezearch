@@ -1,6 +1,9 @@
-from ..base_agent import BaseAgentStrcturedInput
 from typing import List, Literal
-from pydantic import BaseModel, Field
+
+from pydantic import Field
+
+from ..base_agent import BaseAgentStrcturedInput
+
 
 class WebResearchPlan(BaseAgentStrcturedInput):
     """Simplified schema for initial research planning (pre-web-search)."""
