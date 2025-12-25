@@ -3,16 +3,16 @@ from loguru import logger
 
 from core.template_manager import TemplateManager
 
-from .code_config import CodingAgentConfig
 from .code_state import Code, CodeAnalysis, CodeReview, LLMCodeReview
+from .code_interfaces import ICodeReviewer
 
 
-class CodeReviewer:
-    def __init__(self, model: BaseChatModel, config: CodingAgentConfig):
+class CodeReviewer(ICodeReviewer):
+    def __init__(self, model: BaseChatModel, approval_treshold: int):
         self.review_agent = model.with_structured_output(LLMCodeReview)
         self.name = "CodeReviewer"
 
-        self.approval_treshold = config.approval_threshold
+        self.approval_treshold = approval_treshold
 
     async def review(self, task: str, code: Code, analysis: CodeAnalysis) -> CodeReview:
         if not code or not code.code:

@@ -9,24 +9,24 @@ from pydantic import BaseModel
 from core.template_manager import TemplateManager
 
 from ..base_agent import BaseAgent, BaseAgentOutput
-from .synthesis_config import SynthesisAgentConfig
+from .synthesis_builder import SynthesisBuilder
 from .synthesis_state import (OverallSynthesisState, SynthesisAgentState,
                               SynthesisAnalysis, SynthesisStructuredOutput)
 
 
 class SynthesisAgent(BaseAgent):
-    def __init__(self, config: SynthesisAgentConfig):
+    def __init__(self, name: str, purpose: str, additional_input_prompt: str, model_name: str):
         super().__init__()
 
-        self.model_name = config.model_name
+        self.model_name = model_name
         self.model = init_chat_model(self.model_name, model_provider="ollama")
         self.model_final_answer = self.model.with_structured_output(
             SynthesisStructuredOutput
         )
 
-        self._name = config.name
-        self._purpose = config.puprose
-        self._additional_input_prompt = config.additional_input_prompt
+        self._name = name
+        self._purpose = purpose
+        self._additional_input_prompt = additional_input_prompt
 
     @property
     def name(self) -> str:
@@ -61,9 +61,7 @@ class SynthesisAgent(BaseAgent):
                 )
             )
         )
-        response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(
-            messages
-        )
+        response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(messages) #type: ignore
         logger.info(f"[synthesis]: {response.final_answer}")
 
         return {"output": response}  # type: ignore
@@ -87,8 +85,3 @@ class SynthesisAgent(BaseAgent):
         except Exception as e:
             logger.error(f"[{self.name}] ❌ Ошибка при построении графа: {e}")
             raise
-
-
-##DEFAULT AGENT
-config = SynthesisAgentConfig(model_name="llama3.1:8b")
-synthesis_agent = SynthesisAgent(config=config)

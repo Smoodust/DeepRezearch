@@ -4,9 +4,10 @@ from loguru import logger
 from core.template_manager import TemplateManager
 
 from .code_state import CodeAnalysis
+from .code_interfaces import ICodeAnalyzer
 
 
-class CodeAnalyzer:
+class CodeAnalyzer(ICodeAnalyzer):
     def __init__(self, model: BaseChatModel):
         self.analysis_agent = model.with_structured_output(CodeAnalysis)
         self.name = "CodeAnalyzer"

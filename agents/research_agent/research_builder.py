@@ -1,8 +1,10 @@
 from dataclasses import dataclass
+from .research_agent import ResearchAgent
+from ..base_agent import BaseAgentBuilder, BaseAgent
 
 
 @dataclass
-class ResearchAgentConfig:
+class ResearchBuilder(BaseAgentBuilder):
     """Configuration for the coding agent."""
 
     max_result: int
@@ -27,3 +29,6 @@ Use when: Task requires current information, research, or data not in training s
   - NEVER include pure computational tasks or code requirements"""
 
     user_agent: str = "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
+  
+    def build(self) -> BaseAgent:
+        return ResearchAgent(self.model_name, self.name, self.puprose, self.additional_input_prompt, self.user_agent, self.n_queries, self.max_result)

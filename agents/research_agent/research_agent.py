@@ -18,7 +18,6 @@ from core.state import (RawDocument, SearchedDocument,
 from core.template_manager import TemplateManager
 
 from ..base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState)
-from research_config import ResearchAgentConfig
 from research_state import WebResearchPlan
 
 
@@ -28,37 +27,41 @@ options.autolinks = False
 
 
 class ResearchAgent(BaseAgent):
-    def __init__(self, config: ResearchAgentConfig):
+    def __init__(self, model_name: str, name: str, purpose: str, additional_input_prompt: str, user_agent: str, n_queries: int, max_result: int):
 
         super().__init__()
 
-        self.model_name = config.model_name
-        self.model = init_chat_model(self.model_name, model_provider="ollama")
+        self.model_name = model_name
+        self.model = init_chat_model(model_name, model_provider="ollama")
         self.model_search_queries = self.model.with_structured_output(
             SearchQueriesStructureOutput
         )
 
         self.user_agent = {
-            "User-Agent": config.user_agent
+            "User-Agent": user_agent
         }
-
-        self._config = config
+        
+        self._name = name
+        self._purpose = purpose
+        self._additional_input_prompt = additional_input_prompt
+        self.n_queries = n_queries
+        self.max_result = max_result
 
         logger.info(
-            f"[{self.name}] 🔧 Agent initialize with {self.model_name}, max_result={self._config.max_result}"
+            f"[{self.name}] 🔧 Agent initialize with {self.model_name}, max_result={self.max_result}"
         )
 
     @property
     def name(self):
-        return self._config.name
+        return self._name
 
     @property
     def purpose(self):
-        return self._config.puprose
+        return self._purpose
 
     @property
     def additional_input_prompt(self) -> str:
-        return self._config.additional_input_prompt
+        return self._additional_input_prompt
 
     @property
     def get_input_model(self) -> Type[BaseModel]:
@@ -72,7 +75,7 @@ class ResearchAgent(BaseAgent):
     async def create_search_queries(self, state: SearchWorkflowState):
         context = TemplateManager().render_template(
             "research_agent/QUERY_WRITER.jinja",
-            number_queries=self._config.n_queries,
+            number_queries=self.n_queries,
             current_date=self.get_current_date(),
             research_topic=state["workflow_input"],
         )
@@ -80,9 +83,9 @@ class ResearchAgent(BaseAgent):
         try:
             response: SearchQueriesStructureOutput = await self.model_search_queries.ainvoke(context)  # type: ignore
             logger.info(
-                f"[{self.name}] 🔍 The following search queries were selected: {response.query[:self._config.n_queries]}"
+                f"[{self.name}] 🔍 The following search queries were selected: {response.query[:self.n_queries]}"
             )
-            return {"search_queries": response.query[:self._config.n_queries]}
+            return {"search_queries": response.query[:self.n_queries]}
         except Exception as e:
             logger.error(f"[{self.name}] ❌ Error in creating search queries: {e}")
             return {"search_queries": []}
@@ -101,11 +104,11 @@ class ResearchAgent(BaseAgent):
         ) as session:
             for query in state["search_queries"]:
                 logger.info(
-                    f"[{self.name}] 🔍 Start searching: '{query}' (max results: {self._confi.max_result})"
+                    f"[{self.name}] 🔍 Start searching: '{query}' (max results: {self.max_result})"
                 )
 
                 try:
-                    search_results = DDGS().text(query, max_results=self._confi.max_result)  # type: ignore
+                    search_results = DDGS().text(query, max_results=self.max_result)  # type: ignore
 
                     logger.info(
                         f"[{self.name}] 📊 Received  {len(search_results)} results from the search engine"

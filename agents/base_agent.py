@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Type, TypedDict
+from typing import Type, TypedDict, Protocol
 
 from langgraph.graph import StateGraph
 from pydantic import BaseModel
@@ -14,9 +14,15 @@ class BaseAgentOutput(TypedDict):
 
 
 class BaseAgentStrcturedInput(BaseModel):
+    @abstractmethod
     def to_string(self) -> str:
-        raise NotImplementedError()
+        ...
+    
+class StringStructuredInput(BaseAgentStrcturedInput):
+    output: str
 
+    def to_string(self) -> str:
+        return self.output
 
 class BaseAgent(ABC):
     def __init__(
@@ -51,3 +57,8 @@ class BaseAgent(ABC):
 
     async def run(self, state: BaseAgentState) -> BaseAgentOutput:
         return await self.compiled_graph.ainvoke(state)  # type: ignore
+
+class BaseAgentBuilder(Protocol):
+    @abstractmethod
+    def build(self) -> BaseAgent:
+        pass

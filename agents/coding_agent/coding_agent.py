@@ -12,40 +12,50 @@ from pydantic import BaseModel
 
 from ..base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
 from .code_analyzer import CodeAnalyzer
-from .code_config import CodingAgentConfig
 from .code_generator import CodeGenerator
 from .code_interfaces import ICodeAnalyzer, ICodeGenerator, ICodeReviewer
 from .code_reviewer import CodeReviewer
 from .code_state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
                          WorkflowStep)
 from .coder_input import CodingUserInput
+from langchain_core.language_models import BaseChatModel
+from langchain_ollama import ChatOllama
+from langchain_core.tools import Tool
 
 
 class CodingAgent(BaseAgent):
     def __init__(
         self,
-        config: CodingAgentConfig,
-        checkpointer: Optional[BaseCheckpointSaver] = InMemorySaver,
-        analyzer: Optional[ICodeAnalyzer] = None,
-        generator: Optional[ICodeGenerator] = None,
-        reviewer: Optional[ICodeReviewer] = None,
+        name: str,
+        purpose: str,
+        model_name: str,
+        analyzer: Optional[ICodeAnalyzer],
+        generator: Optional[ICodeGenerator],
+        reviewer: Optional[ICodeReviewer],
+
+        chat: type[BaseChatModel] = ChatOllama,
+        max_retries: int = 3,
+        approval_threshold: int = 6,
+        max_feedback_items: int = 3,
+        max_stored_feedback: int = 10,
+        temperature: float = 0.1,
+        num_predict: int = 2048,
+        checkpointer: Optional[BaseCheckpointSaver] = None,
     ):
         super().__init__()
 
-        config.validate()
-
-        model = init_chat_model(config.model_name, model_provider="ollama")
+        model = init_chat_model(model_name, model_provider="ollama")
         checkpointer = checkpointer
         tools = [PythonREPLTool()]  # default tool
 
-        self.max_retries = config.max_retries
+        self.max_retries = max_retries
 
         self.analyzer = analyzer or CodeAnalyzer(model)
-        self.generator = generator or CodeGenerator(config, tools, checkpointer)
-        self.reviewer = reviewer or CodeReviewer(model, config=config)
+        self.generator = generator or CodeGenerator(chat, model_name, temperature, num_predict, tools, checkpointer=checkpointer) #type: ignore
+        self.reviewer = reviewer or CodeReviewer(model, approval_threshold)
 
-        self._name = config.name
-        self._purpose = config.puprose
+        self._name = name
+        self._purpose = purpose
 
     @property
     def name(self):

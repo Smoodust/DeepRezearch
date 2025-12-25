@@ -1,15 +1,15 @@
 import json
-import os
-from typing import Dict, cast
+from typing import Dict, Type, cast
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, SystemMessage
 
+from langgraph.graph import StateGraph
 from loguru import logger
+from pydantic import BaseModel
 
-from agents.base_agent import BaseAgent, BaseAgentStrcturedInput
-from agents.synthesis_agent.synthesis_agent import (SynthesisAgent,
+from ..base_agent import BaseAgent, BaseAgentOutput, BaseAgentState, BaseAgentStrcturedInput, StringStructuredInput
+from ..synthesis_agent.synthesis_agent import (SynthesisAgent,
                                                     SynthesisAgentState)
 
 from ...core.template_manager import TemplateManager
@@ -17,26 +17,15 @@ from orchestrator_state import *
 
 class WorkflowOrchestrator(BaseAgent):
     def __init__(
-        self,
-        model_name: str = "qwen3:0.6b",
-        templates_dir: str | None = "prompts/orchestrator",
+        self, model_name: str, name: str, purpose: str, agents: list[BaseAgent]
     ):
+        self._name = name
+        self._purpose = purpose
         self.base_model = init_chat_model(model_name, model_provider="ollama")
         self.model_workflow_type = self.base_model.with_structured_output(
             OrchestratorTypeDecision
         )
-        self.workflows: Dict[str, BaseAgent] = {}
-
-        self.template_dir = templates_dir
-        if templates_dir and os.path.isdir(templates_dir):
-            self.jinja_env = Environment(
-                loader=FileSystemLoader(templates_dir),
-                autoescape=select_autoescape(enabled_extensions=()),
-                trim_blocks=True,
-                lstrip_blocks=True,
-            )
-        else:
-            raise Exception("There is no prompts folder")
+        self.workflows: Dict[str, BaseAgent] = {agent.name: agent for agent in agents}
 
     def register_workflow(self, workflow: BaseAgent):
         """Register a workflow with the orchestrator"""
@@ -197,9 +186,7 @@ class WorkflowOrchestrator(BaseAgent):
                 )
                 # По умолчанию переходим к synthesis
                 state["last_judged_workflow_type"] = synthesis_key
-                state["last_judged_workflow_input"] = (
-                    "Process the available information due to unknown workflow request"
-                )
+                state["last_judged_workflow_input"] = StringStructuredInput(output="Process the available information due to unknown workflow request")
                 break
 
             # Запускаем выбранный агент
@@ -266,3 +253,23 @@ class WorkflowOrchestrator(BaseAgent):
 
         final_result = await synth_agent.run(synth_state)
         return final_result["output"]
+
+    def build_graph(self) -> StateGraph:
+        raise NotImplementedError("Orchestrator doesn't need graph")
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def purpose(self) -> str:
+        return self._purpose
+
+    @property
+    def get_input_model(self) -> type[BaseModel]:
+        return 
+
+    async def run(self, state: BaseAgentState) -> BaseAgentOutput:
+        return {"output": await self.process_request(state["workflow_input"])}
+
+

@@ -3,13 +3,21 @@ from dataclasses import dataclass
 from langchain_core.language_models import BaseChatModel
 from langchain_ollama import ChatOllama
 
+from agents.coding_agent.coding_agent import CodingAgent
+from ..base_agent import BaseAgentBuilder, BaseAgent
+from .code_interfaces import *
+
 
 @dataclass
-class CodingAgentConfig:
+class CodingAgentBuilder(BaseAgentBuilder):
     """Configuration for the coding agent."""
 
     model_name: str
-    Chat: type[BaseChatModel] = ChatOllama
+    analyzer: Optional[ICodeAnalyzer]
+    generator: Optional[ICodeGenerator]
+    reviewer: Optional[ICodeReviewer]
+
+    chat: type[BaseChatModel] = ChatOllama
     max_retries: int = 3
     approval_threshold: int = 6
     max_feedback_items: int = 3
@@ -18,7 +26,7 @@ class CodingAgentConfig:
     num_predict: int = 2048
 
     name: str = "PYTHON_EXECUTOR"
-    puprose: str = """
+    purpose: str = """
     Write and Execute Python code for calculations, data processing, and algorithmic tasks
     Capabilities:
     - Python REPL environment with standard libraries only
@@ -33,3 +41,7 @@ class CodingAgentConfig:
             raise ValueError("max_retries must be at least 1")
         if not 0 <= self.approval_threshold <= 10:
             raise ValueError("approval_threshold must be between 0 and 10")
+
+    def build(self) -> BaseAgent:
+        return CodingAgent(self.name, self.purpose, self.model_name, self.analyzer, self.generator, self.reviewer, self.chat, self.max_retries, self.approval_threshold, self.max_feedback_items, self.max_stored_feedback, self.temperature, self.num_predict)
+

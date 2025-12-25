@@ -1,14 +1,16 @@
 from dataclasses import dataclass
+from .synthesis_agent import SynthesisAgent
+from ..base_agent import BaseAgentBuilder, BaseAgent
 
 
 @dataclass
-class SynthesisAgentConfig:
+class SynthesisBuilder(BaseAgentBuilder):
     """Configuration for the coding agent."""
 
     model_name: str
 
     name: str = "RESPONSE_SYNTHESIZER"
-    puprose: str = """Synthesizes multi-source information into coherent, well-structured final responses
+    purpose: str = """Synthesizes multi-source information into coherent, well-structured final responses
 Capabilities:
 - Integrates information from multiple agent outputs
 - Formats responses for different audience types
@@ -26,3 +28,6 @@ Capabilities:
   - Agent outputs with results/data (identified by their IDs)
   - Any formatting or tone requirements
   - NEVER include intermediate thinking or routing decisions"""
+    
+    def build(self) -> BaseAgent:
+        return SynthesisAgent(self.name, self.purpose, self.additional_input_prompt, self.model_name)

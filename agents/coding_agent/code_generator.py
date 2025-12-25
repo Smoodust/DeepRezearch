@@ -1,5 +1,6 @@
 from typing import Optional
 
+from langchain_core.language_models import BaseChatModel
 from langchain.agents import create_agent
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import Tool
@@ -10,16 +11,19 @@ from loguru import logger
 
 from core.template_manager import TemplateManager
 
-from .code_config import CodingAgentConfig
 from .code_state import Code, CodeAnalysis
+from .code_interfaces import ICodeGenerator
 
 
-class CodeGenerator:
+class CodeGenerator(ICodeGenerator):
     def __init__(
         self,
-        config: CodingAgentConfig,
+        chat: type[BaseChatModel],
+        model_name: str,
+        temperature: float,
+        num_predict: int,
         tools: list[Tool],
-        checkpointer: BaseCheckpointSaver[str] = None,
+        checkpointer: Optional[BaseCheckpointSaver[str]] = None,
     ):
         if checkpointer is None or isinstance(checkpointer, type):
             checkpointer = InMemorySaver()
@@ -28,11 +32,11 @@ class CodeGenerator:
         self.tools = tools
         self.name = "CodeGenerator"
 
-        model = config.Chat(
-            model=config.model_name,
+        model = chat(
+            model=model_name,
             format="json",
-            temperature=config.temperature,
-            num_predict=config.num_predict,
+            temperature=temperature,
+            num_predict=num_predict,
         )
 
         self.generation_agent = create_agent(
@@ -50,7 +54,7 @@ class CodeGenerator:
         self.thread_id = thread_id
 
     async def generate(
-        self, task: str, analysis: CodeAnalysis, feedback: list[str] = None
+        self, task: str, analysis: CodeAnalysis, feedback: Optional[list[str]] = None
     ) -> Code:
         if not analysis:
             raise ValueError("Analysis cannot be None")
