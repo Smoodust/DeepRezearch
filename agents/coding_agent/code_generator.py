@@ -9,8 +9,8 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.errors import GraphRecursionError
 from loguru import logger
 
-from core.template_manager import TemplateManager
 from core.config import MODEL_URL
+from core.template_manager import TemplateManager
 
 from .code_interfaces import ICodeGenerator
 from .code_state import Code, CodeAnalysis
@@ -38,7 +38,7 @@ class CodeGenerator(ICodeGenerator):
             format="json",
             temperature=temperature,
             num_predict=num_predict,
-            base_url=MODEL_URL
+            base_url=MODEL_URL,
         )
 
         self.generation_agent = create_agent(

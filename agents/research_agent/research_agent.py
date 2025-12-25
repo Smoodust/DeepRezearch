@@ -13,12 +13,13 @@ from langgraph.graph import END, StateGraph
 from loguru import logger
 from pydantic import BaseModel
 
-from .research_state import (WebResearchPlan, RawDocument, SearchedDocument,
-                        SearchQueriesStructureOutput, SearchWorkflowState)
-from core.template_manager import TemplateManager
 from core.config import MODEL_URL
+from core.template_manager import TemplateManager
 
 from ..base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
+from .research_state import (RawDocument, SearchedDocument,
+                             SearchQueriesStructureOutput, SearchWorkflowState,
+                             WebResearchPlan)
 
 options = ConversionOptions()
 options.extract_metadata = False
@@ -40,7 +41,9 @@ class ResearchAgent(BaseAgent):
         super().__init__()
 
         self.model_name = model_name
-        self.model = init_chat_model(model_name, model_provider="ollama", base_url=MODEL_URL)
+        self.model = init_chat_model(
+            model_name, model_provider="ollama", base_url=MODEL_URL
+        )
         self.model_search_queries = self.model.with_structured_output(
             SearchQueriesStructureOutput
         )
