@@ -1,6 +1,7 @@
 from dataclasses import dataclass
+
+from ..base_agent import BaseAgent, BaseAgentBuilder
 from .synthesis_agent import SynthesisAgent
-from ..base_agent import BaseAgentBuilder, BaseAgent
 
 
 @dataclass
@@ -28,6 +29,8 @@ Capabilities:
   - Agent outputs with results/data (identified by their IDs)
   - Any formatting or tone requirements
   - NEVER include intermediate thinking or routing decisions"""
-    
+
     def build(self) -> BaseAgent:
-        return SynthesisAgent(self.name, self.purpose, self.additional_input_prompt, self.model_name)
+        return SynthesisAgent(
+            self.name, self.purpose, self.additional_input_prompt, self.model_name
+        )

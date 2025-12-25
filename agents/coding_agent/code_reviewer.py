@@ -3,8 +3,8 @@ from loguru import logger
 
 from core.template_manager import TemplateManager
 
-from .code_state import Code, CodeAnalysis, CodeReview, LLMCodeReview
 from .code_interfaces import ICodeReviewer
+from .code_state import Code, CodeAnalysis, CodeReview, LLMCodeReview
 
 
 class CodeReviewer(ICodeReviewer):

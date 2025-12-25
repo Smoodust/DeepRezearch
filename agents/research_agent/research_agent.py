@@ -18,8 +18,7 @@ from core.state import (RawDocument, SearchedDocument,
                         SearchQueriesStructureOutput, SearchWorkflowState)
 from core.template_manager import TemplateManager
 
-from ..base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState)
-from research_state import WebResearchPlan
+from ..base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
 
 options = ConversionOptions()
 options.extract_metadata = False
@@ -27,7 +26,16 @@ options.autolinks = False
 
 
 class ResearchAgent(BaseAgent):
-    def __init__(self, model_name: str, name: str, purpose: str, additional_input_prompt: str, user_agent: str, n_queries: int, max_result: int):
+    def __init__(
+        self,
+        model_name: str,
+        name: str,
+        purpose: str,
+        additional_input_prompt: str,
+        user_agent: str,
+        n_queries: int,
+        max_result: int,
+    ):
 
         super().__init__()
 
@@ -37,10 +45,8 @@ class ResearchAgent(BaseAgent):
             SearchQueriesStructureOutput
         )
 
-        self.user_agent = {
-            "User-Agent": user_agent
-        }
-        
+        self.user_agent = {"User-Agent": user_agent}
+
         self._name = name
         self._purpose = purpose
         self._additional_input_prompt = additional_input_prompt
@@ -85,7 +91,7 @@ class ResearchAgent(BaseAgent):
             logger.info(
                 f"[{self.name}] 🔍 The following search queries were selected: {response.query[:self.n_queries]}"
             )
-            return {"search_queries": response.query[:self.n_queries]}
+            return {"search_queries": response.query[: self.n_queries]}
         except Exception as e:
             logger.error(f"[{self.name}] ❌ Error in creating search queries: {e}")
             return {"search_queries": []}
