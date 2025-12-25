@@ -1,90 +1,100 @@
 import asyncio
-import os
-import sys
-
-from loguru import logger
-
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Body
+from pydantic import BaseModel, Field
+from typing import Dict, Any, Optional
 
 from agents.coding_agent.code_builder import CodingAgentBuilder
 from agents.orchestrator.orchestrator_builder import OrchestratorAgentBuilder
 from agents.research_agent.research_builder import ResearchAgentBuilder
 from agents.synthesis_agent.synthesis_builder import SynthesisAgentBuilder
 
-logger.add("agents.log")
+from agents.base_agent import BaseAgentOutput
+
+from loguru import logger
 
 
-class Orchestrator:
-    def __init__(self):
-        self.orchestrator = None
+agent = None
 
-    async def setup_workflows(self):
-        """Initialize all workflows"""
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global agent
+
+    logger.info("Aplication startup")
+
+    try:
         search_agent = ResearchAgentBuilder(model_name="llama3.1:8b")
         coding_agent = CodingAgentBuilder(model_name="llama3.1:8b")
         synthesis_agent = SynthesisAgentBuilder(model_name="llama3.1:8b")
-        # Initialize coding workflow
-        self.orchestrator = OrchestratorAgentBuilder(
+
+        agent = OrchestratorAgentBuilder(
             model_name="llama3.1:8b",
             agents_to_build=[search_agent, coding_agent, synthesis_agent],
         ).build()
 
-    async def run_test_cases(self):
-        """Run test scenarios"""
+    except Exception as e:
+        logger.error(f"Startup error: {e}")
+        agent = None
 
-        test_cases = [
-            # (
-            #     "Research the average annual inflation rate in the United States for the last three full "
-            #     "calendar years (e.g., 2022, 2023, 2024) using reliable public sources. "
-            #     "Then assume an employee with a starting salary of $60,000 receives a nominal salary increase "
-            #     "of 4% per year. Using the researched inflation data, calculate the real (inflation-adjusted) "
-            #     "salary at the end of each year and the real wage growth or loss for each year. "
-            #     "Explain the formula used and present the results in a comparison table including: "
-            #     "year, nominal salary, inflation rate, real salary, and real wage growth percentage. "
-            #     "If final data for the most recent year is unavailable, clearly state any assumptions made."
-            # ),
-            # "What's the highway speed limit in Germany in km/h? Convert it to miles per hour for comparison with US limits."
-            # "Find the number of Nobel laureates in 2024 and 2025. What is the difference in percentage?",
-            # """Research the current 10-year US Treasury bond yield and S&P 500 average dividend yield. Then calculate the equity risk premium and create a comparison table for the last 5 years if you can find the historical data.""",
-            "Hi! How are you?",
-            # "Calculate 2**222 in python REPL. Provide me an output",
-            # "Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0. Write Python code to solve the task",
-            # "What's the standard GPA scale (A=4.0, etc.)? Calculate the GPA for someone with 3 A's, 2 B's, and 1 C in a semester."
-            # "Research modern approaches to machine learning",
-            # "Explain what polymorphism is in OOP",
-            # "Create a class for working with SQLite database",
-            # "Analyze the advantages and disadvantages of microservices architecture",
-            # "Write tests for calculate_average function",
-            # "How does garbage collection work in Python?",
-            # "Implement a REST API endpoint for user authentication",
-        ]
+    yield
 
-        for i, user_input in enumerate(test_cases, 1):
-            logger.debug(f"\n{'='*60}")
-            logger.debug(f"TEST {i}: {user_input}")
-            logger.debug(f"{'='*60}")
-
-            try:
-                result = await self.orchestrator.run({"workflow_input": user_input})
-
-                logger.success(f"ORCHESTRATOR DECISION:")
-                print(f"{result['output']}")
-
-            except Exception as e:
-                logger.error(f"ERROR: {str(e)}")
+    logger.info("Shut down")
 
 
-async def main():
-    """Main testing function"""
-    tester = Orchestrator()
-
-    logger.info("🔄 Initializing workflows...")
-    await tester.setup_workflows()
-
-    logger.info("🚀 Running test scenarios...")
-    await tester.run_test_cases()
+app = FastAPI(
+    title="DeepRezearch API",
+    description="API for Perplexity na minimalkax",
+    version="1.0.0",
+    openapi_tags=[{"name": "DeepRezearch", "description": "Perplexity na minimalkax"}],
+    lifespan=lifespan,
+)
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+class QueryRequest(BaseModel):
+    message: str
+
+class QueryResponse(BaseModel):
+    success: bool = Field(..., description="Whether processing was successful")
+    input: str = Field(..., description="Original user query")
+    output: str = Field(..., description="Processed response from agent system")
+    timestamp: float = Field(..., description="Processing completion timestamp")
+    metadata: Optional[Dict[str, Any]] = Field(
+        None, 
+        description="Optional metadata about the processing"
+    )
+
+
+@app.post("/query",
+          status_code=200,
+          response_model=QueryResponse,
+          summary="Process user query",
+          description="""Process a user query through the multi-agent system.
+          
+          The query is routed through an orchestrator that determines which specialized agents 
+          (research, coding, or synthesis) should handle different aspects of the request.
+          
+          Returns a structured response containing the processed output.""", 
+          tags=["DeepRezearch"])
+async def process_query(
+    request: QueryRequest = Body(
+        ...,
+        description="User query to be processed by the agent system",
+        example={
+            "message": "Hi! How are you?"
+        }
+    )
+) -> QueryResponse:
+    try:
+        result: BaseAgentOutput = await agent.run({"workflow_input": request.message})
+
+        return {
+            "success": True,
+            "input": request.message,
+            "output": result.get("output", ""),
+            "timestamp": asyncio.get_event_loop().time(),
+        }
+
+    except Exception as e:
+        logger.error(f"Error processing query: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Processing error: {str(e)}")

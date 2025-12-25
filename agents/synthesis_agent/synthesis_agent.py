@@ -63,9 +63,9 @@ class SynthesisAgent(BaseAgent):
             )
         )
         response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(messages)  # type: ignore
-        logger.info(f"[synthesis]: {response.final_answer}")
+        logger.info(f"[synthesis]: {response}")
 
-        return {"output": response}  # type: ignore
+        return {"output": response.final_answer}  # type: ignore
 
     def build_graph(self) -> StateGraph:
         try:
