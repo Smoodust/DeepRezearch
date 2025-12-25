@@ -3,9 +3,10 @@ import uuid
 from typing import Optional, Type
 
 from langchain.chat_models import init_chat_model
+from langchain_core.language_models import BaseChatModel
 from langchain_experimental.tools import PythonREPLTool
+from langchain_ollama import ChatOllama
 from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, StateGraph
 from loguru import logger
 from pydantic import BaseModel
@@ -18,9 +19,6 @@ from .code_reviewer import CodeReviewer
 from .code_state import (Code, CodeAgentState, CodeAnalysis, CodeReview,
                          WorkflowStep)
 from .coder_input import CodingUserInput
-from langchain_core.language_models import BaseChatModel
-from langchain_ollama import ChatOllama
-from langchain_core.tools import Tool
 
 
 class CodingAgent(BaseAgent):
@@ -32,7 +30,6 @@ class CodingAgent(BaseAgent):
         analyzer: Optional[ICodeAnalyzer],
         generator: Optional[ICodeGenerator],
         reviewer: Optional[ICodeReviewer],
-
         chat: type[BaseChatModel] = ChatOllama,
         max_retries: int = 3,
         approval_threshold: int = 6,
@@ -51,7 +48,7 @@ class CodingAgent(BaseAgent):
         self.max_retries = max_retries
 
         self.analyzer = analyzer or CodeAnalyzer(model)
-        self.generator = generator or CodeGenerator(chat, model_name, temperature, num_predict, tools, checkpointer=checkpointer) #type: ignore
+        self.generator = generator or CodeGenerator(chat, model_name, temperature, num_predict, tools, checkpointer=checkpointer)  # type: ignore
         self.reviewer = reviewer or CodeReviewer(model, approval_threshold)
 
         self._name = name

@@ -15,9 +15,8 @@ class ICodeGenerator(Protocol):
     ) -> Code:
         """Generate code based on task and analysis."""
         ...
-    
-    def set_thread_id(self, thread_id: str):
-        ...
+
+    def set_thread_id(self, thread_id: str): ...
 
 
 class ICodeReviewer(Protocol):

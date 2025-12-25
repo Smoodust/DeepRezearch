@@ -1,19 +1,18 @@
 import json
-from typing import Dict, Type, cast
+from typing import Dict, cast
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, SystemMessage
-
 from langgraph.graph import StateGraph
 from loguru import logger
-from pydantic import BaseModel
 from orchestrator_state import *
-
-from ..base_agent import BaseAgent, BaseAgentOutput, BaseAgentState, BaseAgentStrcturedInput, StringStructuredInput
-from ..synthesis_agent.synthesis_agent import (SynthesisAgent,
-                                                    SynthesisAgentState)
+from pydantic import BaseModel
 
 from ...core.template_manager import TemplateManager
+from ..base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState,
+                          BaseAgentStrcturedInput, StringStructuredInput)
+from ..synthesis_agent.synthesis_agent import (SynthesisAgent,
+                                               SynthesisAgentState)
 
 
 class WorkflowOrchestrator(BaseAgent):
@@ -187,7 +186,9 @@ class WorkflowOrchestrator(BaseAgent):
                 )
                 # По умолчанию переходим к synthesis
                 state["last_judged_workflow_type"] = synthesis_key
-                state["last_judged_workflow_input"] = StringStructuredInput(output="Process the available information due to unknown workflow request")
+                state["last_judged_workflow_input"] = StringStructuredInput(
+                    output="Process the available information due to unknown workflow request"
+                )
                 break
 
             # Запускаем выбранный агент
@@ -272,5 +273,3 @@ class WorkflowOrchestrator(BaseAgent):
 
     async def run(self, state: BaseAgentState) -> BaseAgentOutput:
         return {"output": await self.process_request(state["workflow_input"])}
-
-

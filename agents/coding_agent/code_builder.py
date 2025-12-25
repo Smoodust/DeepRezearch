@@ -4,7 +4,8 @@ from langchain_core.language_models import BaseChatModel
 from langchain_ollama import ChatOllama
 
 from agents.coding_agent.coding_agent import CodingAgent
-from ..base_agent import BaseAgentBuilder, BaseAgent
+
+from ..base_agent import BaseAgent, BaseAgentBuilder
 from .code_interfaces import *
 
 
@@ -43,5 +44,18 @@ class CodingAgentBuilder(BaseAgentBuilder):
             raise ValueError("approval_threshold must be between 0 and 10")
 
     def build(self) -> BaseAgent:
-        return CodingAgent(self.name, self.purpose, self.model_name, self.analyzer, self.generator, self.reviewer, self.chat, self.max_retries, self.approval_threshold, self.max_feedback_items, self.max_stored_feedback, self.temperature, self.num_predict)
-
+        return CodingAgent(
+            self.name,
+            self.purpose,
+            self.model_name,
+            self.analyzer,
+            self.generator,
+            self.reviewer,
+            self.chat,
+            self.max_retries,
+            self.approval_threshold,
+            self.max_feedback_items,
+            self.max_stored_feedback,
+            self.temperature,
+            self.num_predict,
+        )

@@ -9,13 +9,14 @@ from pydantic import BaseModel
 from core.template_manager import TemplateManager
 
 from ..base_agent import BaseAgent, BaseAgentOutput
-from .synthesis_builder import SynthesisBuilder
 from .synthesis_state import (OverallSynthesisState, SynthesisAgentState,
                               SynthesisAnalysis, SynthesisStructuredOutput)
 
 
 class SynthesisAgent(BaseAgent):
-    def __init__(self, name: str, purpose: str, additional_input_prompt: str, model_name: str):
+    def __init__(
+        self, name: str, purpose: str, additional_input_prompt: str, model_name: str
+    ):
         super().__init__()
 
         self.model_name = model_name
@@ -61,7 +62,7 @@ class SynthesisAgent(BaseAgent):
                 )
             )
         )
-        response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(messages) #type: ignore
+        response: SynthesisStructuredOutput = await self.model_final_answer.ainvoke(messages)  # type: ignore
         logger.info(f"[synthesis]: {response.final_answer}")
 
         return {"output": response}  # type: ignore

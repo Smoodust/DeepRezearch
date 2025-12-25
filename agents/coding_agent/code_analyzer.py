@@ -3,8 +3,8 @@ from loguru import logger
 
 from core.template_manager import TemplateManager
 
-from .code_state import CodeAnalysis
 from .code_interfaces import ICodeAnalyzer
+from .code_state import CodeAnalysis
 
 
 class CodeAnalyzer(ICodeAnalyzer):

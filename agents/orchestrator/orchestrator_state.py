@@ -5,8 +5,10 @@ from pydantic import BaseModel, Field
 
 from agents.base_agent import BaseAgentStrcturedInput
 
+
 class OrchestratorStructuredInput(BaseAgentStrcturedInput):
     user_input: str
+
 
 class OrchestratorTypeDecision(BaseModel):
     """Model for orchestrator routing decision"""

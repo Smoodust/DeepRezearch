@@ -1,6 +1,7 @@
 from dataclasses import dataclass
+
+from ..base_agent import BaseAgent, BaseAgentBuilder
 from .research_agent import ResearchAgent
-from ..base_agent import BaseAgentBuilder, BaseAgent
 
 
 @dataclass
@@ -31,6 +32,14 @@ Use when: Task requires current information, research, or data not in training s
     user_agent: str = (
         "User-Agent: CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org) generic-library/0.0"
     )
-  
+
     def build(self) -> BaseAgent:
-        return ResearchAgent(self.model_name, self.name, self.puprose, self.additional_input_prompt, self.user_agent, self.n_queries, self.max_result)
+        return ResearchAgent(
+            self.model_name,
+            self.name,
+            self.puprose,
+            self.additional_input_prompt,
+            self.user_agent,
+            self.n_queries,
+            self.max_result,
+        )
