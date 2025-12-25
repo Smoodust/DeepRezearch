@@ -1,10 +1,9 @@
-
 import operator
-from typing import List, Literal, Annotated, TypedDict
+from typing import Annotated, List, Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
-from ..base_agent import BaseAgentStrcturedInput, BaseAgentState
+from ..base_agent import BaseAgentState, BaseAgentStrcturedInput
 
 
 class WebResearchPlan(BaseAgentStrcturedInput):
