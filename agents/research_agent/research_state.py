@@ -1,8 +1,10 @@
-from typing import List, Literal
 
-from pydantic import Field
+import operator
+from typing import List, Literal, Annotated, TypedDict
 
-from ..base_agent import BaseAgentStrcturedInput
+from pydantic import BaseModel, Field
+
+from ..base_agent import BaseAgentStrcturedInput, BaseAgentState
 
 
 class WebResearchPlan(BaseAgentStrcturedInput):
@@ -26,3 +28,29 @@ class WebResearchPlan(BaseAgentStrcturedInput):
 {"\n".join(self.research_angles)}
 # Search queries
 {"\n".join(self.search_queries)}"""
+
+
+class SearchQueriesStructureOutput(BaseModel):
+    rationale: str
+    query: list[str]
+
+
+class RawDocument(TypedDict):
+    url: str
+    source: str
+
+
+class SearchedDocument(TypedDict):
+    url: str
+    source: str
+    extracted_info: str
+
+
+class SearchedCollection(TypedDict):
+    searched_documents: list[SearchedDocument]
+
+
+class SearchWorkflowState(BaseAgentState):
+    search_queries: list[str]
+    sources: list[RawDocument]
+    searched_documents: Annotated[list[SearchedDocument], operator.add]

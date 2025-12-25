@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-from orchestrator import WorkflowOrchestrator
+from .orchestrator import WorkflowOrchestrator
 
 from ..base_agent import BaseAgent, BaseAgentBuilder
 
@@ -10,8 +10,8 @@ class OrchestratorAgentBuilder(BaseAgentBuilder):
     """Configuration for the coding agent."""
 
     model_name: str
-    agents: list[BaseAgent] = []
-    agents_to_build: list[BaseAgentBuilder] = []
+    agents: list[BaseAgent] = field(default_factory=list)
+    agents_to_build: list[BaseAgentBuilder] = field(default_factory=list)
 
     name: str = "ORCHESTRATOR"
     purpose: str = ""
@@ -21,7 +21,7 @@ class OrchestratorAgentBuilder(BaseAgentBuilder):
     )
 
     def build(self) -> BaseAgent:
-        created_agents = self.agents
+        created_agents = self.agents.copy()
         for x in self.agents_to_build:
             created_agents.append(x.build())
         return WorkflowOrchestrator(

@@ -5,10 +5,10 @@ from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.graph import StateGraph
 from loguru import logger
-from orchestrator_state import *
+from .orchestrator_state import *
 from pydantic import BaseModel
 
-from ...core.template_manager import TemplateManager
+from core.template_manager import TemplateManager
 from ..base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState,
                           BaseAgentStrcturedInput, StringStructuredInput)
 from ..synthesis_agent.synthesis_agent import (SynthesisAgent,
