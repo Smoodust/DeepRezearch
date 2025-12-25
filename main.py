@@ -7,9 +7,9 @@ from loguru import logger
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from agents.coding_agent.code_builder import CodingAgentBuilder
+from agents.orchestrator.orchestrator_builder import OrchestratorAgentBuilder
 from agents.research_agent.research_builder import ResearchAgentBuilder
 from agents.synthesis_agent.synthesis_builder import SynthesisAgentBuilder
-from agents.orchestrator.orchestrator_builder import OrchestratorAgentBuilder
 
 logger.add("agents.log")
 
@@ -25,7 +25,10 @@ class Orchestrator:
         coding_agent = CodingAgentBuilder(model_name="llama3.1:8b")
         synthesis_agent = SynthesisAgentBuilder(model_name="llama3.1:8b")
         # Initialize coding workflow
-        self.orchestrator = OrchestratorAgentBuilder(model_name="llama3.1:8b", agents_to_build=[search_agent, coding_agent, synthesis_agent]).build()
+        self.orchestrator = OrchestratorAgentBuilder(
+            model_name="llama3.1:8b",
+            agents_to_build=[search_agent, coding_agent, synthesis_agent],
+        ).build()
 
     async def run_test_cases(self):
         """Run test scenarios"""

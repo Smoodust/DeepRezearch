@@ -25,7 +25,7 @@ Use when: Task requires current information, research, or data not in training s
   - Questions requiring factual answers
   - Requests for current information or data not in training set
   - NEVER include pure computational tasks or code requirements"""
-    
+
     max_result: int = 5
     n_queries: int = 5
 
