@@ -4,7 +4,7 @@ from ..base_agent import BaseAgentBuilder, BaseAgent
 
 
 @dataclass
-class SynthesisBuilder(BaseAgentBuilder):
+class SynthesisAgentBuilder(BaseAgentBuilder):
     """Configuration for the coding agent."""
 
     model_name: str

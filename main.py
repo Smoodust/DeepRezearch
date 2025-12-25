@@ -6,28 +6,26 @@ from loguru import logger
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from agents.coding_agent.coding_agent_factory import coding_agent
-from agents.orchestrator.orchestrator import WorkflowOrchestrator
-from agents.research_agent.research_agent import ResearchAgent
-from agents.synthesis_agent.synthesis_agent import synthesis_agent
+from agents.coding_agent.code_builder import CodingAgentBuilder
+from agents.research_agent.research_builder import ResearchAgentBuilder
+from agents.synthesis_agent.synthesis_builder import SynthesisAgentBuilder
+from agents.orchestrator.orchestrator_builder import OrchestratorAgentBuilder
 
 logger.add("agents.log")
 
 
 class Orchestrator:
     def __init__(self):
-        self.orchestrator = WorkflowOrchestrator(model_name="llama3.1:8b")
+        self.orchestrator = None
 
     async def setup_workflows(self):
         """Initialize all workflows"""
 
+        search_agent = ResearchAgentBuilder(model_name="llama3.1:8b")
+        coding_agent = CodingAgentBuilder(model_name="llama3.1:8b")
+        synthesis_agent = SynthesisAgentBuilder(model_name="llama3.1:8b")
         # Initialize coding workflow
-        search_agent = ResearchAgent(
-            model_name="llama3.1:8b", max_result=5, n_queries=2
-        )
-        self.orchestrator.register_workflow(coding_agent)
-        self.orchestrator.register_workflow(search_agent)
-        self.orchestrator.register_workflow(synthesis_agent)
+        self.orchestrator = OrchestratorAgentBuilder(model_name="llama3.1:8b", agents_to_build=[search_agent, coding_agent, synthesis_agent]).build()
 
     async def run_test_cases(self):
         """Run test scenarios"""
@@ -65,10 +63,10 @@ class Orchestrator:
             logger.debug(f"{'='*60}")
 
             try:
-                result = await self.orchestrator.process_request(user_input)
+                result = await self.orchestrator.run({"workflow_input": user_input})
 
                 logger.success(f"ORCHESTRATOR DECISION:")
-                print(f"{result}")
+                print(f"{result['output']}")
 
             except Exception as e:
                 logger.error(f"ERROR: {str(e)}")

@@ -3,12 +3,12 @@ from orchestrator import WorkflowOrchestrator
 from ..base_agent import BaseAgent, BaseAgentBuilder
 
 @dataclass
-class OrchestratorBuilder(BaseAgentBuilder):
+class OrchestratorAgentBuilder(BaseAgentBuilder):
     """Configuration for the coding agent."""
 
     model_name: str
-    agents: list[BaseAgent]
-    agents_to_build: list[BaseAgentBuilder]
+    agents: list[BaseAgent] = []
+    agents_to_build: list[BaseAgentBuilder] = []
 
     name: str = "ORCHESTRATOR"
     purpose: str = ""

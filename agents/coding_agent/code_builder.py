@@ -13,9 +13,9 @@ class CodingAgentBuilder(BaseAgentBuilder):
     """Configuration for the coding agent."""
 
     model_name: str
-    analyzer: Optional[ICodeAnalyzer]
-    generator: Optional[ICodeGenerator]
-    reviewer: Optional[ICodeReviewer]
+    analyzer: Optional[ICodeAnalyzer] = None
+    generator: Optional[ICodeGenerator] = None
+    reviewer: Optional[ICodeReviewer] = None
 
     chat: type[BaseChatModel] = ChatOllama
     max_retries: int = 3
