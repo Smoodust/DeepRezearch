@@ -7,13 +7,14 @@ from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.graph import StateGraph
 from loguru import logger
 from pydantic import BaseModel
+from orchestrator_state import *
 
 from ..base_agent import BaseAgent, BaseAgentOutput, BaseAgentState, BaseAgentStrcturedInput, StringStructuredInput
 from ..synthesis_agent.synthesis_agent import (SynthesisAgent,
                                                     SynthesisAgentState)
 
 from ...core.template_manager import TemplateManager
-from orchestrator_state import *
+
 
 class WorkflowOrchestrator(BaseAgent):
     def __init__(
@@ -267,7 +268,7 @@ class WorkflowOrchestrator(BaseAgent):
 
     @property
     def get_input_model(self) -> type[BaseModel]:
-        return 
+        return OrchestratorStructuredInput
 
     async def run(self, state: BaseAgentState) -> BaseAgentOutput:
         return {"output": await self.process_request(state["workflow_input"])}

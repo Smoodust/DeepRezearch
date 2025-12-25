@@ -12,6 +12,7 @@ from langchain.chat_models import init_chat_model
 from langgraph.graph import END, StateGraph
 from loguru import logger
 from pydantic import BaseModel
+from research_state import WebResearchPlan
 
 from core.state import (RawDocument, SearchedDocument,
                         SearchQueriesStructureOutput, SearchWorkflowState)
@@ -19,7 +20,6 @@ from core.template_manager import TemplateManager
 
 from ..base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState)
 from research_state import WebResearchPlan
-
 
 options = ConversionOptions()
 options.extract_metadata = False
