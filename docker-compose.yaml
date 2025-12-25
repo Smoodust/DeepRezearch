@@ -1,0 +1,62 @@
+services:
+  ollama:
+    container_name: ollama
+    pull_policy: always
+    tty: true
+    restart: unless-stopped
+    image: docker.io/ollama/ollama:latest
+    ports:
+      - 11435:11434
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    networks:
+      - ollama-docker
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all 
+              capabilities: [gpu]
+    healthcheck:
+      test: |
+        /bin/sh -c '
+          if ollama list 2>&1 | grep -q "llama3.1"; then
+            echo "Model is loaded"
+            exit 0
+          else
+            echo "Model not found in list"
+            if ollama list > /dev/null 2>&1; then
+              echo "Ollama API is responding but model not loaded yet"
+              exit 0
+            else
+              echo "Ollama API not responding"
+              exit 1
+            fi
+          fi
+        '
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    entrypoint: ["/usr/bin/bash", "-c", "ollama serve & sleep 10 && ollama pull llama3.1:8b && wait"]
+
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    restart: always
+    ports:
+      - "8000:8000"
+    networks:
+      - ollama-docker
+    environment:
+      MODEL_URL: "http://ollama:11434"
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+networks:
+  ollama-docker:
+    driver: bridge

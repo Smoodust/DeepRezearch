@@ -9,6 +9,8 @@ from .orchestrator_state import *
 from pydantic import BaseModel
 
 from core.template_manager import TemplateManager
+from core.config import MODEL_URL
+
 from ..base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState,
                           BaseAgentStrcturedInput, StringStructuredInput)
 from ..synthesis_agent.synthesis_agent import (SynthesisAgent,
@@ -21,7 +23,7 @@ class WorkflowOrchestrator(BaseAgent):
     ):
         self._name = name
         self._purpose = purpose
-        self.base_model = init_chat_model(model_name, model_provider="ollama")
+        self.base_model = init_chat_model(model_name, model_provider="ollama", base_url=MODEL_URL)
         self.model_workflow_type = self.base_model.with_structured_output(
             OrchestratorTypeDecision
         )
@@ -75,7 +77,7 @@ class WorkflowOrchestrator(BaseAgent):
             logger.error(f"Analysis error: {repr(e)}")
             decision_data = OrchestratorTypeDecision(
                 thinking=f"Analysis error: {str(e)}",
-                workflow_type="synthesis",
+                workflow_type="RESPONSE_SYNTHESIZER",
                 confidence=0.5,
             )
 

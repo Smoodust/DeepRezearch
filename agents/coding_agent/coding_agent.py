@@ -11,6 +11,8 @@ from langgraph.graph import END, StateGraph
 from loguru import logger
 from pydantic import BaseModel
 
+from core.config import MODEL_URL
+
 from ..base_agent import BaseAgent, BaseAgentOutput, BaseAgentState
 from .code_analyzer import CodeAnalyzer
 from .code_generator import CodeGenerator
@@ -41,7 +43,7 @@ class CodingAgent(BaseAgent):
     ):
         super().__init__()
 
-        model = init_chat_model(model_name, model_provider="ollama")
+        model = init_chat_model(model_name, model_provider="ollama", base_url=MODEL_URL)
         checkpointer = checkpointer
         tools = [PythonREPLTool()]  # default tool
 

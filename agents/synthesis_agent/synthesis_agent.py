@@ -7,6 +7,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from core.template_manager import TemplateManager
+from core.config import MODEL_URL
 
 from ..base_agent import BaseAgent, BaseAgentOutput
 from .synthesis_state import (OverallSynthesisState, SynthesisAgentState,
@@ -20,7 +21,7 @@ class SynthesisAgent(BaseAgent):
         super().__init__()
 
         self.model_name = model_name
-        self.model = init_chat_model(self.model_name, model_provider="ollama")
+        self.model = init_chat_model(self.model_name, model_provider="ollama", base_url=MODEL_URL)
         self.model_final_answer = self.model.with_structured_output(
             SynthesisStructuredOutput
         )
