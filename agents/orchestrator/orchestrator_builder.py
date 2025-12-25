@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
 
-from .orchestrator import WorkflowOrchestrator
-
 from ..base_agent import BaseAgent, BaseAgentBuilder
+from .orchestrator import WorkflowOrchestrator
 
 
 @dataclass

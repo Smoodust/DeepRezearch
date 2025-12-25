@@ -5,16 +5,16 @@ from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, SystemMessage
 from langgraph.graph import StateGraph
 from loguru import logger
-from .orchestrator_state import *
 from pydantic import BaseModel
 
-from core.template_manager import TemplateManager
 from core.config import MODEL_URL
+from core.template_manager import TemplateManager
 
 from ..base_agent import (BaseAgent, BaseAgentOutput, BaseAgentState,
                           BaseAgentStrcturedInput, StringStructuredInput)
 from ..synthesis_agent.synthesis_agent import (SynthesisAgent,
                                                SynthesisAgentState)
+from .orchestrator_state import *
 
 
 class WorkflowOrchestrator(BaseAgent):
@@ -23,7 +23,9 @@ class WorkflowOrchestrator(BaseAgent):
     ):
         self._name = name
         self._purpose = purpose
-        self.base_model = init_chat_model(model_name, model_provider="ollama", base_url=MODEL_URL)
+        self.base_model = init_chat_model(
+            model_name, model_provider="ollama", base_url=MODEL_URL
+        )
         self.model_workflow_type = self.base_model.with_structured_output(
             OrchestratorTypeDecision
         )
